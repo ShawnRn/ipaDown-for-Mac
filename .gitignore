@@ -33,3 +33,4 @@ ipaDown-backup/
 build_logs/
 releases/
 scripts/release.sh
+.agent/
