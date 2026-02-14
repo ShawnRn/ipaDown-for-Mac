@@ -8,5 +8,10 @@
 	<string>https://raw.githubusercontent.com/ShawnRn/ipaDown-for-Mac/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>bjptNX8PlJbdwtszqi3/BAHV4TYyZ3UuV1EMANJ+GaY=</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hans</string>
+	</array>
 </dict>
 </plist>

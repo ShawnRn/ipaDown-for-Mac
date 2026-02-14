@@ -74,8 +74,13 @@ struct AboutView: View {
             // Check for Updates Section
             VStack(spacing: 12) {
                 Button {
-                    if let delegate = NSApplication.shared.delegate as? AppDelegate {
-                        delegate.updaterController.checkForUpdates(nil)
+                    // 优先使用静态 shared 实例访问，如果失败则尝试强转系统 delegate
+                    if let delegate = AppDelegate.shared {
+                        delegate.checkForUpdates()
+                    } else if let delegate = NSApplication.shared.delegate as? AppDelegate {
+                        delegate.checkForUpdates()
+                    } else {
+                        print("Error: Could not access AppDelegate via shared or NSApp.delegate")
                     }
                 } label: {
                     Label("检查更新", systemImage: "arrow.up.circle.fill")
