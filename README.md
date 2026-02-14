@@ -5,7 +5,7 @@
 
 <img src="./pics/Icon.png" width="128" height="128" style="float: left; margin-right: 20px;">
 
-**A .ipa download tool developed in Swift for macOS App Store.**
+**A .ipa download tool developed in Swift for macOS.**
 
 [简体中文](./README_zh-CN.md) | [English](./README.md)
 
