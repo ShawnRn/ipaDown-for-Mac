@@ -1,0 +1,35 @@
+# Xcode
+#
+# Build artifacts
+build/
+DerivedData/
+
+# Personal settings
+xcuserdata/
+
+# Architecture and dependencies
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+!Package.resolved
+
+# macOS
+#
+.DS_Store
+*.swp
+*.lock
+
+# App Specific Runtime Data
+#
+*/accounts.json
+*/tasks.json
+*.log
+
+# Project Backup/Reference (If any)
+#
+参考项目/
+ipaDown-backup/
+build_logs/
+releases/
+scripts/release.sh
