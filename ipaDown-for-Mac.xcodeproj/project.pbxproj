@@ -269,6 +269,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SUEnableInstallerLauncherService = YES;
+				INFOPLIST_KEY_SUFeedURL = "https://raw.githubusercontent.com/ShawnRn/ipaDown-for-Mac/main/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "bjptNX8PlJbdwtszqi3/BAHV4TYyZ3UuV1EMANJ+GaY=";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -302,6 +305,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SUEnableInstallerLauncherService = YES;
+				INFOPLIST_KEY_SUFeedURL = "https://raw.githubusercontent.com/ShawnRn/ipaDown-for-Mac/main/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "bjptNX8PlJbdwtszqi3/BAHV4TYyZ3UuV1EMANJ+GaY=";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
