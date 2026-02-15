@@ -72,7 +72,7 @@ struct SidebarView: View {
                     }
                 }
             }
-            .padding(.top, 52)
+            .padding(.top, 10)
             .padding(.horizontal, 10)
             
             Spacer()
@@ -113,8 +113,7 @@ struct SidebarView: View {
             .padding(.bottom, 20)
         }
         .frame(width: 200)
-        .background(Color(nsColor: .windowBackgroundColor)) 
-        .ignoresSafeArea()
+
     }
     
     private func badgeCount(for page: NavigationPage) -> Int {

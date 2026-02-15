@@ -20,6 +20,13 @@ struct ChangelogView: View {
     
     let changelogs: [ChangelogItem] = [
         ChangelogItem(
+            version: "1.0.1",
+            date: "2026-02-15",
+            changes: [
+                "优化了界面细节。"
+            ]
+        ),
+        ChangelogItem(
             version: "1.0.0",
             date: "2026-02-14",
             changes: [
