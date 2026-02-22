@@ -203,10 +203,6 @@ struct DownloadTaskRow: View {
             #else
             HStack(spacing: 8) {
                 if task.status == .completed {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .font(.system(size: 20))
-                    
                     // 分享单独拉出来，规避 Menu 内部触发 ShareSheet 可能导致的 SwiftUI 挂死
                     Button {
                         onShare()
