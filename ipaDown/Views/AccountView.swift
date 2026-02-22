@@ -213,6 +213,7 @@ struct AccountView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
                             .textContentType(.emailAddress)
+                            .autocorrectionDisabled()
                             .onSubmit { performLogin() }
                         
                         Divider()
@@ -285,6 +286,7 @@ struct AccountView: View {
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .textContentType(.emailAddress)
+                        .autocorrectionDisabled()
                         .onSubmit { performLogin() }
                 }
                 
