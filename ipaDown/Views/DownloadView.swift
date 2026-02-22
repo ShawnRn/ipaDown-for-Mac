@@ -14,47 +14,50 @@ struct DownloadView: View {
     
     var body: some View {
         NavigationStack {
-            List {
+            Group {
                 if downloadManager.tasks.isEmpty {
                     ContentUnavailableView(
                         "没有下载任务",
                         systemImage: "arrow.down.circle",
                         description: Text("搜索并添加 IPA 以后，下载的任务会显示在这里。")
                     )
+                    // 使用 Group 包裹使得空视图能够自然填充外层 NavigationStack 并被推到几何中心
                 } else {
-                    ForEach(downloadManager.tasks) { task in
-                        DownloadTaskRow(
-                            task: task,
-                            onTogglePause: {
-                                downloadManager.togglePause(task: task)
-                            },
-                            onRemove: {
-                                downloadManager.removeTask(task)
-                            },
-                            onShare: {
-                                handleShare(task)
-                            }
-                        )
-                        #if os(iOS)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                downloadManager.removeTask(task)
-                            } label: {
-                                Label("删除", systemImage: "trash")
-                            }
-                            
-                            Button {
-                                downloadManager.togglePause(task: task)
-                            } label: {
-                                if task.status.isActive || task.status == .waiting {
-                                    Label("暂停", systemImage: "pause.fill")
-                                } else {
-                                    Label("继续", systemImage: "play.fill")
+                    List {
+                        ForEach(downloadManager.tasks) { task in
+                            DownloadTaskRow(
+                                task: task,
+                                onTogglePause: {
+                                    downloadManager.togglePause(task: task)
+                                },
+                                onRemove: {
+                                    downloadManager.removeTask(task)
+                                },
+                                onShare: {
+                                    handleShare(task)
                                 }
+                            )
+                            #if os(iOS)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    downloadManager.removeTask(task)
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                                
+                                Button {
+                                    downloadManager.togglePause(task: task)
+                                } label: {
+                                    if task.status.isActive || task.status == .waiting {
+                                        Label("暂停", systemImage: "pause.fill")
+                                    } else {
+                                        Label("继续", systemImage: "play.fill")
+                                    }
+                                }
+                                .tint(.orange)
                             }
-                            .tint(.orange)
+                            #endif
                         }
-                        #endif
                     }
                 }
             }
