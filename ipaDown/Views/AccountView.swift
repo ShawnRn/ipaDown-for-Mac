@@ -311,7 +311,7 @@ struct AccountView: View {
                             ProgressView()
                         } else {
                             Text("登录")
-                                .foregroundStyle((accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty) ? .secondary : .blue)
+                                .foregroundStyle((accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty) ? Color.secondary : Color.blue)
                         }
                         Spacer()
                     }
