@@ -19,22 +19,23 @@ struct AccountView: View {
     var body: some View {
         @Bindable var manager = accountManager
         
-        ScrollView {
-            VStack(spacing: 20) {
-                if accountManager.accounts.isEmpty {
-                    ContentUnavailableView(
-                        "无保存的账号",
-                        systemImage: "person.crop.circle.badge.xmark",
-                        description: Text("请点击右上角绑定你的 Apple ID")
-                    )
-                    .padding(.top, 40)
-                } else {
-                    ForEach(accountManager.accounts) { account in
-                        accountCard(account)
+        Group {
+            if accountManager.accounts.isEmpty {
+                ContentUnavailableView(
+                    "无保存的账号",
+                    systemImage: "person.crop.circle.badge.xmark",
+                    description: Text("请点击右上角绑定你的 Apple 账户")
+                )
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        ForEach(accountManager.accounts) { account in
+                            accountCard(account)
+                        }
                     }
+                    .padding()
                 }
             }
-            .padding()
         }
         .navigationTitle("账号管理")
         .toolbar {

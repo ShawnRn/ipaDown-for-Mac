@@ -97,22 +97,19 @@ struct VersionView: View {
                         .background(versionManager.versions.isEmpty ? AnyShapeStyle(Color.clear) : AnyShapeStyle(.regularMaterial))
                     } else if versionManager.versions.isEmpty {
                         // 空状态
-                        VStack(spacing: 12) {
-                            if versionManager.currentApp != nil {
-                                Image(systemName: "slash.circle")
-                                    .font(.system(size: 40))
-                                    .foregroundStyle(.secondary)
-                                Text("未找到该应用的历史版本信息")
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 40))
-                                    .foregroundStyle(.secondary)
-                                Text("请先在搜索页面选择一个 App，或上方输入 App ID")
-                                    .foregroundStyle(.secondary)
-                            }
+                        if versionManager.currentApp != nil {
+                            ContentUnavailableView(
+                                "历史版本",
+                                systemImage: "slash.circle",
+                                description: Text("未找到该应用的历史版本信息")
+                            )
+                        } else {
+                            ContentUnavailableView(
+                                "查询历史版本",
+                                systemImage: "magnifyingglass",
+                                description: Text("请先在搜索页面选择一个 App，或上方输入 App ID")
+                            )
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -36,15 +36,11 @@ struct SearchView: View {
                     .foregroundStyle(.red)
                 Spacer()
             } else if searchManager.results.isEmpty {
-                Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.secondary)
-                    Text("输入 App 名称、App Store 链接或 ID 进行搜索")
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
+                ContentUnavailableView(
+                    "搜索 App",
+                    systemImage: "magnifyingglass",
+                    description: Text("输入 App 名称、App Store 链接或 ID 进行搜索")
+                )
             } else {
                 resultsList
             }
