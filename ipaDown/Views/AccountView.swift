@@ -48,20 +48,22 @@ struct AccountView: View {
         }
         .sheet(isPresented: $showingAddAccount) {
             #if os(macOS)
-            macOSLoginSection
+            if accountManager.needsTwoFactorCode {
+                twoFactorSheet
+            } else {
+                macOSLoginSection
+            }
             #else
             NavigationStack {
-                iOSLoginSection
+                if accountManager.needsTwoFactorCode {
+                    twoFactorSheet
+                } else {
+                    iOSLoginSection
+                }
             }
             // iPad 上使用默认的大尺寸居中浮层，iPhone 上使用半屏弹起
             .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [] : [.medium])
             #endif
-        }
-        .sheet(isPresented: .init(
-            get: { accountManager.needsTwoFactorCode },
-            set: { if !$0 { accountManager.needsTwoFactorCode = false } }
-        )) {
-            twoFactorSheet
         }
         .alert(refreshResultTitle, isPresented: $showingRefreshResult) {
             Button("好", role: .cancel) { }
@@ -396,10 +398,12 @@ struct AccountView: View {
                 .disabled(accountManager.twoFactorCode.count < 6 || accountManager.isLoggingIn)
             }
         }
+        #if os(macOS)
         .padding(40)
         .background(Color.platformWindowBackground)
-        #if os(macOS)
         .frame(width: 440)
+        #else
+        .padding()
         #endif
     }
     
