@@ -36,6 +36,6 @@ Package.resolved
 ipaDown-backup/
 build_logs/
 releases/
-scripts/release.sh
+# scripts/release.sh (Allow versioning)
 .agent/
 ipaDownIcons/
