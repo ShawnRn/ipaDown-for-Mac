@@ -95,9 +95,15 @@ struct DownloadView: View {
     }
     
     private func handleShare(_ task: IPADownloadTask) {
-        guard let sourceURL = task.filePath else { return }
-        
         let fileName = task.fileName
+        // 动态拼接最新沙盒路径，防止重启后使用旧的 filePath 绝对路径导致 "File not found"
+        let sourceURL = downloadManager.downloadDirectory.appendingPathComponent(fileName)
+        
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else {
+            print("❌ [UI] Share failed: File not found at \(sourceURL.path)")
+            return
+        }
+        
         let tempDir = FileManager.default.temporaryDirectory
         let destinationURL = tempDir.appendingPathComponent(fileName)
         
