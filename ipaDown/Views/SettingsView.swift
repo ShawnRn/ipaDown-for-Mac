@@ -7,112 +7,18 @@
 
 import SwiftUI
 
-enum SettingsTab: String, Identifiable, CaseIterable {
-    case general, downloads, network
-    var id: String { self.rawValue }
-    
-    var title: String {
-        switch self {
-        case .general: return "通用"
-        case .downloads: return "下载"
-        case .network: return "网络"
-        }
-    }
-}
-
 struct SettingsView: View {
-    @State private var selectedTab: SettingsTab = .general
-    
     var body: some View {
-        #if os(macOS)
-        VStack(spacing: 0) {
-            // Header with Sliding Tabs
-            VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    
-                    // Motrix-style Segmented Control
-                    HStack(spacing: 0) {
-                        ForEach(SettingsTab.allCases) { tab in
-                            TabButton(
-                                title: tab.title,
-                                isSelected: selectedTab == tab
-                            ) {
-                                selectedTab = tab
-                            }
-                        }
-                    }
-                    .padding(4)
-                    .background {
-                        Capsule()
-                            .fill(Color.platformControlBackground)
-                    }
-                    .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
-                    
-                    Spacer()
-                }
-                .padding(.vertical, 16)
-            }
-            .background(Color.platformWindowBackground)
-            
-            Divider()
-            
-            // Content
-            ZStack {
-                switch selectedTab {
-                case .general:
-                    GeneralSettingsTab()
-                case .downloads:
-                    DownloadsSettingsTab()
-                case .network:
-                    NetworkSettingsTab()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .frame(minWidth: 600, minHeight: 450)
-        .navigationTitle("设置")
-        #else
         Form {
             GeneralSettingsTab(isSectionOnly: true)
             DownloadsSettingsTab(isSectionOnly: true)
             NetworkSettingsTab(isSectionOnly: true)
         }
-        .navigationTitle("设置")
+        #if os(macOS)
+        .formStyle(.grouped)
+        .frame(minWidth: 500, minHeight: 550)
         #endif
-    }
-    
-    private var tabTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
-        )
-    }
-}
-
-// MARK: - Components
-
-struct TabButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(isSelected ? .white : .primary)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
-                .background {
-                    if isSelected {
-                        Capsule()
-                            .fill(Color.accentColor)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
+        .navigationTitle("设置")
     }
 }
 
