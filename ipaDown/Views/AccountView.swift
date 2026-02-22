@@ -412,7 +412,12 @@ struct AccountView: View {
     
     private func submitTwoFactor() {
         guard accountManager.twoFactorCode.count == 6, !accountManager.isLoggingIn else { return }
-        Task { await accountManager.submitTwoFactorCode() }
+        Task {
+            await accountManager.submitTwoFactorCode()
+            if accountManager.errorMessage == nil && !accountManager.needsTwoFactorCode {
+                showingAddAccount = false
+            }
+        }
     }
 }
 
