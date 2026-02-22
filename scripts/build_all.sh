@@ -41,9 +41,9 @@ if [ -f "$APPCAST_FILE" ]; then
     if [ -n "$CURRENT_APPCAST_BUILD" ]; then
         echo "当前 appcast.xml 中的 Build 号: $CURRENT_APPCAST_BUILD"
         
-        if [ "$PROJECT_BUILD" -le "$CURRENT_APPCAST_BUILD" ]; then
-            echo "❌ 错误: Xcode 项目 build 号 ($PROJECT_BUILD) 必须大于 appcast.xml 中的当前 build 号 ($CURRENT_APPCAST_BUILD)。"
-            echo "请在 Xcode 项目设置中增加 Build 号 (CURRENT_PROJECT_VERSION) 以防出现无限更新推送。"
+        if [ "$PROJECT_BUILD" -lt "$CURRENT_APPCAST_BUILD" ]; then
+            echo "❌ 错误: Xcode 项目 build 号 ($PROJECT_BUILD) 必须大于或等于 appcast.xml 中的当前 build 号 ($CURRENT_APPCAST_BUILD)。"
+            echo "请检查 Xcode 项目设置中的 Build 号 (CURRENT_PROJECT_VERSION) 以防版本回退。"
             exit 1
         fi
     fi
