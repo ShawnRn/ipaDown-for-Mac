@@ -154,6 +154,7 @@ struct GeneralSettingsTab: View {
             .disabled(true)
         }
         
+        #if os(macOS)
         Section("日志与诊断") {
             @Bindable var logger = AppLogger.shared
             Picker("日志级别", selection: $logger.minLevel) {
@@ -167,6 +168,7 @@ struct GeneralSettingsTab: View {
             }
             .buttonStyle(.bordered)
         }
+        #endif
     }
 }
 
