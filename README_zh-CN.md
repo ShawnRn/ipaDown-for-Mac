@@ -1,15 +1,15 @@
-# ipaDown for Mac
+# ipaDown (Mac & iOS)
 
 > This is a vibe-coded project.
 > Developed with ❤️ using **Antigravity**.
 
 <img src="./pics/Icon.png" width="128" height="128" style="float: left; margin-right: 20px;">
 
-**一款使用 Swift 开发的、轻量级 macOS App Store 应用下载工具。**
+**一款使用 Swift 开发的、轻量级 Apple App Store 应用下载工具，支持 macOS 原生运行及导出 iOS IPA。**
 
 [简体中文](./README_zh-CN.md) | [English](./README.md)
 
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg?style=flat)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20iOS-lightgrey.svg?style=flat)
 ![Language](https://img.shields.io/badge/language-Swift-orange.svg?style=flat)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)
 
@@ -26,7 +26,7 @@
 
 ## 📖 简介
 
-**ipaDown for Mac** 是一款使用 Swift 开发的 `.ipa` 文件下载工具，旨在帮助用户直接从 App Store 获取应用包。
+**ipaDown** 是一款使用 Swift 开发的跨平台应用下载工具，旨在帮助用户直接从 App Store 获取应用包，并支持在 macOS 上生成适配「巨魔/侧载」的 iOS `.ipa` 文件。
 
 > 💡 **灵感来源**
 >
@@ -41,8 +41,9 @@
 - **高级搜索**：支持 App 关键词搜索及历史版本 ID 获取。
 - **高速下载**：内置 `aria2` 后端，支持多线程并发下载与断点续传。
 - **自动保活**：全自动 Token 刷新机制，确保会话持久有效。
-- **系统集成**：支持原生系统通知及 AirDrop 快速分享已下载文件。
-- **自动更新**：集成 Sparkle 框架，时刻保持最新版本。
+- **跨平台支持**：支持导出专供 iOS/iPadOS 设备安装的 `.ipa` 格式，完美兼容 TrollStore、Sideloadly 等安装方式。
+- **自动打包**：集成双端自动打包脚本，一键生成 macOS `.dmg` 与 iOS `.ipa`。
+- **自动更新**：集成 Sparkle 框架（仅 Mac 端），时刻保持最新版本。
 
 ## 📦 安装指南
 
@@ -60,8 +61,17 @@
 2. **打开项目**
    使用 Xcode 打开 `ipaDown-for-Apple.xcodeproj` 文件。
 
-3. **编译运行**
-   选择 `ipaDown` Scheme，按下 `Cmd + R` 即可运行。
+3. **一键自动打包 (推荐)**
+   直接运行内置的打包脚本，即可在 `build_output` 目录下生成 macOS 和 iOS 的成品包：
+   ```bash
+   chmod +x ./scripts/build_all.sh
+   ./scripts/build_all.sh
+   ```
+
+4. **手动编译**
+   - 使用 Xcode 选择 `ipaDown` Scheme。
+   - 打开 `ipaDown-for-Apple.xcodeproj`，按下 `Cmd + R` 即可运行。
+   - 若要导出 iOS 包，请在 Xcode 中将目标设备切换为 `Any iOS Device` 后进行 Archive。
 
 ## 🛠 技术栈
 

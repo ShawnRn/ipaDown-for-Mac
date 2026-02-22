@@ -20,14 +20,12 @@ struct ChangelogView: View {
     
     let changelogs: [ChangelogItem] = [
         ChangelogItem(
-            version: "1.3.0",
+            version: "1.3",
             date: "2026-02-22",
             changes: [
-                "引入 ZIPFoundation 实现纯原生 IPA 签名注入，支持跨平台离线安装。",
-                "为账号管理添加丝滑的“切换置顶”弹性布局动画。",
-                "全局适配系统 AccentColor，UI 元素自动随项目配色变化。",
-                "简化 MacOS 设置页面布局，移除标签切换，改为直观的长页面展示。",
-                "支持配置通用 iOS/iPadOS IPA 的编译与归档。"
+                "新增支持 iPhone/iPad。",
+                "微调了 UI。",
+                "修复了一些 Bugs。"
             ]
         ),
         ChangelogItem(
@@ -41,7 +39,7 @@ struct ChangelogView: View {
             version: "1.0",
             date: "2026-02-14",
             changes: [
-                "ipaDown for Mac 的首个 Release 版本。",
+                "🎉 ipaDown for Mac 的首个 Release 版本。",
                 "支持多账号管理与地区快速切换。",
                 "支持 App 搜索与获取历史版本 ID。",
                 "实现账号 Token 自动刷新与 StoreFront 状态维护。"

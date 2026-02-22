@@ -1,8 +1,8 @@
-# Xcode
-#
 # Build artifacts
 build/
 DerivedData/
+build_output/
+build_temp/
 
 # Personal settings
 xcuserdata/

@@ -6,13 +6,15 @@
 
 ## 项目概述
 
-**ipaDown** 是一款使用 Swift + SwiftUI 构建的 **macOS 原生应用**，用于从 Apple App Store 下载 IPA 文件。它通过 Apple 的私有 plist API 实现用户认证、应用购买、历史版本查询、分块下载和签名注入。
+**ipaDown** 是一款使用 Swift + SwiftUI 构建的 **跨平台苹果应用下载工具**（支持 macOS 与 iOS）。它通过 Apple 的私有 plist API 实现用户认证、应用购买、历史版本查询、分块下载和签名注入。
 
-- **最低系统要求**: macOS 26.0+
+- **支持平台**: 
+  - **macOS**: 26.0+ (原生 App)
+  - **iOS/iPadOS**: 26.0+ (提供侧载 IPA)
 - **Swift 版本**: Swift 6（严格并发模式）
-- **UI 框架**: SwiftUI
+- **UI 框架**: SwiftUI (通用组件布局)
 - **Bundle ID**: `com.shawnrain.ipaDown`
-- **自动更新**: Sparkle (SPUStandardUpdaterController)
+- **自动更新**: Sparkle (仅 macOS 端)
 
 ---
 
@@ -203,14 +205,27 @@ ipaDown/
 
 ---
 
-## 构建与运行
+## 构建与导出
 
+项目提供了自动化脚本实现跨平台打包、生成安装包及更新元数据。
+
+### 1. 双端自动化打包脚本 (`scripts/build_all.sh`)
+该脚本集成了完整的分发流程：
+- **macOS**: 执行 `xcodebuild archive` → 提取 `.app` → 使用 `create-dmg` 生成带安装界面的 `.dmg`。
+- **iOS**: 执行 `xcodebuild archive` → 提取 `.app` → 打包为 `Payload` 格式的 `.ipa`（适配巨魔/侧载）。
+- **Sparkle**: 自动从生成的 `DMG` 提取 EdDSA 签名 → 计算流水 Build 号 → 更新 `appcast.xml`。
+
+**使用方法**:
 ```bash
-# 使用 Xcode 打开项目
-open ipaDown-for-Apple.xcodeproj
-
-# 构建（需要 Xcode，不支持纯命令行 xcodebuild）
-# 在 Xcode 中选择 ipaDown target → Run (⌘R)
+chmod +x ./scripts/build_all.sh
+./scripts/build_all.sh
 ```
+产物将输出在 `build_output/` 目录下。
 
-**注意**：项目使用 Sparkle SPM 依赖，首次打开需等待包解析完成。
+### 2. 手动构建
+- **Xcode**: 打开 `ipaDown-for-Apple.xcodeproj`。
+- **Target**: 选择 `ipaDown`，根据目标平台切换 `My Mac` 或 `Any iOS Device`。
+
+---
+
+**注意**：项目使用 Sparkle 和 ZIPFoundation 等 SPM 依赖，首次打开需等待包解析完成。
