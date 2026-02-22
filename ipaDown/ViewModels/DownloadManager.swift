@@ -257,6 +257,9 @@ class DownloadManager {
     }
     
     private func performDownloadAndPostProcess(task: IPADownloadTask, info: DownloadInfo) async throws {
+        // 3. 下载文件
+        task.status = .downloading
+        let filePath = downloadDirectory.appendingPathComponent(task.fileName)
         
         try await DownloadService.downloadFile(
             from: info.downloadURL,
