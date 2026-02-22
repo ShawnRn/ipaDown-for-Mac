@@ -13,29 +13,55 @@ struct AccountView: View {
     @State private var isRefreshing = false
     @State private var showingRefreshResult = false
     @State private var refreshResultTitle = ""
-    @State private var refreshResultMessage = ""
+    @State private var showingAddAccount = false
     
     var body: some View {
         @Bindable var manager = accountManager
         
         ScrollView {
             VStack(spacing: 20) {
-                // 当前账号信息
-                if let account = accountManager.activeAccount {
-                    activeAccountSection(account)
-                }
-                
-                // 登录表单
-                loginSection
-                
-                // 已有账号列表
-                if !accountManager.accounts.isEmpty {
-                    accountsListSection
+                if accountManager.accounts.isEmpty {
+                    ContentUnavailableView(
+                        "无保存的账号",
+                        systemImage: "person.crop.circle.badge.xmark",
+                        description: Text("请点击右上角绑定你的 Apple ID")
+                    )
+                    .padding(.top, 40)
+                } else {
+                    ForEach(accountManager.accounts) { account in
+                        accountCard(account)
+                    }
                 }
             }
             .padding()
         }
         .navigationTitle("账号管理")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingAddAccount = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingAddAccount) {
+            NavigationStack {
+                loginSection
+                    .padding()
+                    .navigationTitle("登录 Apple 账号")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("取消") { showingAddAccount = false }
+                        }
+                    }
+            }
+            #if os(macOS)
+            .frame(width: 400, height: 350)
+            #else
+            .presentationDetents([.medium])
+            #endif
+        }
         .sheet(isPresented: .init(
             get: { accountManager.needsTwoFactorCode },
             set: { if !$0 { accountManager.needsTwoFactorCode = false } }
@@ -49,16 +75,18 @@ struct AccountView: View {
         }
     }
     
-    // MARK: - 当前账号
+    // MARK: - 统一账号卡片
     
     @ViewBuilder
-    private func activeAccountSection(_ account: Account) -> some View {
+    private func accountCard(_ account: Account) -> some View {
+        let isActive = account.id == accountManager.activeAccount?.id
+        
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Image(systemName: "person.crop.circle.fill")
+                    Image(systemName: isActive ? "person.crop.circle.fill.badge.checkmark" : "person.crop.circle")
                         .font(.system(size: 40))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(isActive ? .blue : .secondary)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(account.displayName)
@@ -76,7 +104,7 @@ struct AccountView: View {
                                 .font(.caption)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(.blue.opacity(0.1))
+                                .background(isActive ? .blue.opacity(0.1) : .secondary.opacity(0.1))
                                 .clipShape(Capsule())
                         }
                         
@@ -92,9 +120,11 @@ struct AccountView: View {
                     Text("Apple ID: \(account.appleId)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                     
-                    Spacer()
+                    Spacer(minLength: 16)
                     
+                    // 刷新按钮
                     Button {
                         Task {
                             isRefreshing = true
@@ -110,8 +140,7 @@ struct AccountView: View {
                         }
                     } label: {
                         if isRefreshing {
-                            ProgressView()
-                                .controlSize(.small)
+                            ProgressView().controlSize(.small)
                         } else {
                             Text("刷新 Token")
                         }
@@ -119,98 +148,19 @@ struct AccountView: View {
                     .buttonStyle(.glass)
                     .controlSize(.small)
                     .disabled(isRefreshing)
-                }
-            }
-        }
-    }
-    
-    // MARK: - 登录表单
-    
-    private var loginSection: some View {
-        @Bindable var manager = accountManager
-        
-        return GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("登录 Apple 账号", systemImage: "key")
-                    .font(.headline)
-                
-                TextField("Apple ID (邮箱)", text: $manager.loginEmail)
-                    .textFieldStyle(.roundedBorder)
-                    .textContentType(.emailAddress)
-                    .onSubmit { performLogin() }
-                
-                SecureField("密码", text: $manager.loginPassword)
-                    .textFieldStyle(.roundedBorder)
-                    .textContentType(.password)
-                    .onSubmit { performLogin() }
-                
-                if let error = accountManager.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-                
-                HStack {
-                    Spacer()
                     
+                    // 切换按钮
                     Button {
-                        performLogin()
+                        accountManager.switchAccount(to: account)
                     } label: {
-                        if accountManager.isLoggingIn {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Text("登录")
-                        }
+                        Text(isActive ? "当前使用" : "切换")
                     }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(accountManager.isLoggingIn)
-                }
-            }
-        }
-    }
-    
-    private func performLogin() {
-        guard !accountManager.isLoggingIn else { return }
-        Task { await accountManager.login() }
-    }
-    
-    // MARK: - 账号列表
-    
-    private var accountsListSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("已保存的账号", systemImage: "person.2")
-                    .font(.headline)
-                
-                ForEach(accountManager.accounts) { account in
-                    HStack {
-                        Image(systemName: account.id == accountManager.activeAccount?.id
-                              ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(account.id == accountManager.activeAccount?.id
-                                           ? .blue : .secondary)
-                        
-                        VStack(alignment: .leading) {
-                            Text(account.email)
-                                .font(.body)
-                            if let code = account.countryCode {
-                                Text(CountryCodes.countryName(for: code))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        Button {
-                            accountManager.switchAccount(to: account)
-                        } label: {
-                            Text("切换")
-                        }
-                        .buttonStyle(.glass)
-                        .controlSize(.small)
-                        .disabled(account.id == accountManager.activeAccount?.id)
-                        
+                    .buttonStyle(.glass)
+                    .controlSize(.small)
+                    .disabled(isActive || isRefreshing)
+                    
+                    // 删除按钮 (仅非激活账号可删，或你原设逻辑均可删除。此处假设当前使用也可删或者遵循原逻辑)
+                    if !isActive {
                         Button(role: .destructive) {
                             accountManager.deleteAccount(account)
                         } label: {
@@ -219,13 +169,57 @@ struct AccountView: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(.red)
                     }
-                    .padding(.vertical, 4)
-                    
-                    if account.id != accountManager.accounts.last?.id {
-                        Divider()
-                    }
                 }
             }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(isActive ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+        )
+    }
+    
+    // MARK: - 登录表单
+    
+    private var loginSection: some View {
+        @Bindable var manager = accountManager
+        
+        return VStack(alignment: .leading, spacing: 20) {
+            TextField("Apple ID (邮箱)", text: $manager.loginEmail)
+                .textFieldStyle(.roundedBorder)
+                .textContentType(.emailAddress)
+                #if os(iOS)
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+                #endif
+                .onSubmit { performLogin() }
+            
+            SecureField("密码", text: $manager.loginPassword)
+                .textFieldStyle(.roundedBorder)
+                .textContentType(.password)
+                .onSubmit { performLogin() }
+            
+            if let error = accountManager.errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+            
+            Button {
+                performLogin()
+            } label: {
+                if accountManager.isLoggingIn {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Text("登录")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut(.defaultAction)
+            .disabled(accountManager.isLoggingIn || accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty)
+            
+            Spacer()
         }
     }
     
