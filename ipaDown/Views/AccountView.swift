@@ -45,21 +45,13 @@ struct AccountView: View {
                     Image(systemName: "plus")
                 }
             }
-        }
         .sheet(isPresented: $showingAddAccount) {
-            NavigationStack {
-                loginSection
-                    .padding()
-                    .navigationTitle("登录 Apple 账号")
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("取消") { showingAddAccount = false }
-                        }
-                    }
-            }
             #if os(macOS)
-            .frame(width: 400, height: 350)
+            macOSLoginSection
             #else
+            NavigationStack {
+                iOSLoginSection
+            }
             .presentationDetents([.medium])
             #endif
         }
@@ -179,50 +171,167 @@ struct AccountView: View {
         )
     }
     
-    // MARK: - 登录表单
+    // MARK: - macOS 登录浮层
     
-    private var loginSection: some View {
+    #if os(macOS)
+    private var macOSLoginSection: some View {
         @Bindable var manager = accountManager
         
-        return VStack(alignment: .leading, spacing: 20) {
-            TextField("Apple ID (邮箱)", text: $manager.loginEmail)
-                .textFieldStyle(.roundedBorder)
-                .textContentType(.emailAddress)
-                #if os(iOS)
-                .keyboardType(.emailAddress)
-                .autocapitalization(.none)
-                #endif
-                .onSubmit { performLogin() }
+        return VStack(spacing: 24) {
+            HStack(alignment: .top, spacing: 20) {
+                // 左侧应用/Apple 图标
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 60, height: 60)
+                    
+                    Image(systemName: "applelogo")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    // 标题区
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("登录你的 Apple 账户")
+                            .font(.headline)
+                        
+                        Text("输入 Apple 账户的电子邮件和密码。")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    // 输入框组
+                    VStack(spacing: 0) {
+                        TextField("Apple ID", text: $manager.loginEmail)
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .textContentType(.emailAddress)
+                            .onSubmit { performLogin() }
+                        
+                        Divider()
+                        
+                        SecureField("密码", text: $manager.loginPassword)
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .textContentType(.password)
+                            .onSubmit { performLogin() }
+                    }
+                    .background(Color(NSColor.textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+                    
+                    if let error = accountManager.errorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
             
-            SecureField("密码", text: $manager.loginPassword)
-                .textFieldStyle(.roundedBorder)
-                .textContentType(.password)
-                .onSubmit { performLogin() }
+            // 底部按钮区
+            HStack {
+                Spacer()
+                
+                Button("取消") {
+                    showingAddAccount = false
+                }
+                .keyboardShortcut(.cancelAction)
+                
+                Button {
+                    performLogin()
+                } label: {
+                    if accountManager.isLoggingIn {
+                        ProgressView().controlSize(.small)
+                            .padding(.horizontal, 8)
+                    } else {
+                        Text("登录")
+                            .padding(.horizontal, 8)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(accountManager.isLoggingIn || accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 480)
+    }
+    #endif
+    
+    // MARK: - iOS 原生风格登录表单
+    
+    #if os(iOS)
+    private var iOSLoginSection: some View {
+        @Bindable var manager = accountManager
+        
+        return Form {
+            Section {
+                HStack {
+                    Text("Apple ID")
+                        .frame(width: 80, alignment: .leading)
+                    
+                    TextField("Apple ID", text: $manager.loginEmail)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .textContentType(.emailAddress)
+                        .onSubmit { performLogin() }
+                }
+                
+                HStack {
+                    Text("密码")
+                        .frame(width: 80, alignment: .leading)
+                    
+                    SecureField("必填", text: $manager.loginPassword)
+                        .textContentType(.password)
+                        .onSubmit { performLogin() }
+                }
+            }
             
             if let error = accountManager.errorMessage {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.red)
+                    .listRowBackground(Color.clear)
             }
             
-            Button {
-                performLogin()
-            } label: {
-                if accountManager.isLoggingIn {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Text("登录")
-                        .frame(maxWidth: .infinity)
+            Section {
+                Button {
+                    performLogin()
+                } label: {
+                    HStack {
+                        Spacer()
+                        if accountManager.isLoggingIn {
+                            ProgressView()
+                        } else {
+                            Text("登录")
+                                .foregroundStyle((accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty) ? .secondary : .blue)
+                        }
+                        Spacer()
+                    }
                 }
+                .disabled(accountManager.isLoggingIn || accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty)
+            } footer: {
+                Text("Apple ID 可用于登录 Apple 的所有服务。")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .keyboardShortcut(.defaultAction)
-            .disabled(accountManager.isLoggingIn || accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty)
-            
-            Spacer()
+        }
+        .navigationTitle("帐户")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("完成") {
+                    showingAddAccount = false
+                }
+                .font(.headline)
+            }
         }
     }
+    #endif
     
     private func performLogin() {
         guard !accountManager.isLoggingIn else { return }
