@@ -20,6 +20,35 @@ echo "=========================================="
 echo "    ipaDown 双端自动打包脚本 (Mac & iOS)   "
 echo "=========================================="
 
+# 1a. 获取项目版本信息并预检
+echo ">>> 检查项目版本信息..."
+XCODE_INFO=$(xcodebuild -project ipaDown-for-Apple.xcodeproj -target ipaDown -showBuildSettings 2>/dev/null)
+PROJECT_BUILD=$(echo "$XCODE_INFO" | grep "CURRENT_PROJECT_VERSION =" | sed 's/.*= //')
+PROJECT_VERSION=$(echo "$XCODE_INFO" | grep "MARKETING_VERSION =" | sed 's/.*= //')
+APPCAST_FILE="$PROJECT_DIR/appcast.xml"
+
+if [ -z "$PROJECT_BUILD" ]; then
+    echo "错误: 无法从 Xcode 项目中获取 build 号 (CURRENT_PROJECT_VERSION)"
+    exit 1
+fi
+
+echo "Xcode 项目 Build 号: $PROJECT_BUILD"
+echo "Xcode 项目版本号: $PROJECT_VERSION"
+
+# 检查 appcast.xml 中的 build 号
+if [ -f "$APPCAST_FILE" ]; then
+    CURRENT_APPCAST_BUILD=$(grep -oE "<sparkle:version>[0-9]+</sparkle:version>" "$APPCAST_FILE" | head -n 1 | grep -oE "[0-9]+")
+    if [ -n "$CURRENT_APPCAST_BUILD" ]; then
+        echo "当前 appcast.xml 中的 Build 号: $CURRENT_APPCAST_BUILD"
+        
+        if [ "$PROJECT_BUILD" -le "$CURRENT_APPCAST_BUILD" ]; then
+            echo "❌ 错误: Xcode 项目 build 号 ($PROJECT_BUILD) 必须大于 appcast.xml 中的当前 build 号 ($CURRENT_APPCAST_BUILD)。"
+            echo "请在 Xcode 项目设置中增加 Build 号 (CURRENT_PROJECT_VERSION) 以防出现无限更新推送。"
+            exit 1
+        fi
+    fi
+fi
+
 # 2. 编译 macOS 版本
 echo ">>> 开始编译 macOS 版本..."
 xcodebuild clean archive \
@@ -119,16 +148,8 @@ DMG_FILE="$BUILD_DIR/ipaDown_${APP_VERSION}.dmg"
 if [ -f "$DMG_FILE" ]; then
     SIGN_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -name "sign_update" -type f -perm +111 | head -n 1)
 
-    TODAY=$(date +"%Y%m%d")
-    LAST_BUILD=$(grep -oE "<sparkle:version>${TODAY}[0-9]{2}</sparkle:version>" "$APPCAST_FILE" 2>/dev/null | grep -oE "${TODAY}[0-9]{2}" | sort -nr | head -n 1)
-
-    if [ -z "$LAST_BUILD" ]; then
-        SPARKLE_VERSION="${TODAY}00"
-    else
-        SUFFIX=${LAST_BUILD:8:2}
-        NEXT_SUFFIX=$(printf "%02d" $((10#$SUFFIX + 1)))
-        SPARKLE_VERSION="${TODAY}${NEXT_SUFFIX}"
-    fi
+    SPARKLE_VERSION="$PROJECT_BUILD"
+    echo "使用项目 Build 号 (sparkle:version): $SPARKLE_VERSION"
 
     if [ -n "$SIGN_TOOL" ]; then
         echo "正在生成 DMG 的 EdDSA 签名..."
