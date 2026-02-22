@@ -66,6 +66,7 @@ struct SearchView: View {
             SearchBar(text: $manager.searchText) {
                 Task { await searchManager.search() }
             }
+            .padding(.horizontal, -4) // 微调搜索栏水平外边距以对齐图标
             
             ViewThatFits(in: .horizontal) {
                 // Wide layout (iPad landscape, macOS)
@@ -85,7 +86,6 @@ struct SearchView: View {
                     HStack {
                         resultLimitPicker
                         Spacer()
-                        searchButton
                     }
                 }
             }
@@ -104,8 +104,6 @@ struct SearchView: View {
         resultLimitPicker
         
         Spacer()
-        
-        searchButton
     }
     
     private var countryPicker: some View {
@@ -158,15 +156,6 @@ struct SearchView: View {
             }
             .frame(width: 70)
         }
-    }
-    
-    private var searchButton: some View {
-        Button("搜索") {
-            Task { await searchManager.search() }
-        }
-        .keyboardShortcut(.defaultAction)
-        .buttonStyle(.borderedProminent)
-        .disabled(searchManager.searchText.isEmpty || searchManager.isSearching)
     }
     
     // MARK: - 搜索结果列表

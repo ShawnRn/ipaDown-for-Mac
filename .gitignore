@@ -3,6 +3,10 @@ build/
 DerivedData/
 build_output/
 build_temp/
+cert_v2_temp/
+
+# Security
+*.key
 
 # Personal settings
 xcuserdata/
