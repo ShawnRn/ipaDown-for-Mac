@@ -7,7 +7,6 @@
 
 import Foundation
 import UserNotifications
-import AppKit
 
 /// 系统通知服务
 class NotificationService {

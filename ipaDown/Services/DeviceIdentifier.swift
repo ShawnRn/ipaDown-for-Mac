@@ -6,10 +6,15 @@
 //
 
 import Foundation
+#if os(macOS)
 import IOKit
+#elseif os(iOS)
+import UIKit
+#endif
 
-/// 获取 macOS 设备标识符（MAC 地址）
+/// 获取设备标识符
 enum DeviceIdentifier {
+    #if os(macOS)
     /// 获取系统网卡 MAC 地址并格式化为 GUID
     static func system() -> String? {
         guard let macAddress = getMACAddress() else { return nil }
@@ -17,11 +22,6 @@ enum DeviceIdentifier {
             .uppercased()
             .replacingOccurrences(of: ":", with: "")
             .replacingOccurrences(of: "-", with: "")
-    }
-    
-    /// 生成随机设备标识符
-    static func random() -> String {
-        (0..<6).map { _ in String(format: "%02X", Int.random(in: 0...255)) }.joined()
     }
     
     /// 获取主网卡 MAC 地址
@@ -61,6 +61,22 @@ enum DeviceIdentifier {
         }
         
         return nil
+    }
+    #elseif os(iOS)
+    /// 使用 identifierForVendor 作为设备标识符
+    static func system() -> String? {
+        UIDevice.current.identifierForVendor?.uuidString
+            .replacingOccurrences(of: "-", with: "")
+            .prefix(12)
+            .uppercased()
+            .map { String($0) }
+            .joined()
+    }
+    #endif
+    
+    /// 生成随机设备标识符
+    static func random() -> String {
+        (0..<6).map { _ in String(format: "%02X", Int.random(in: 0...255)) }.joined()
     }
     
     /// 获取或生成持久化的设备标识符

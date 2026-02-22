@@ -1,0 +1,82 @@
+{
+  "fill" : {
+    "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : "hard-light"
+            }
+          ],
+          "image-name" : "箭头.png",
+          "name" : "箭头",
+          "position" : {
+            "scale" : 0.49,
+            "translation-in-points" : [
+              0,
+              -177.8125
+            ]
+          }
+        },
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : "hard-light"
+            }
+          ],
+          "image-name" : "ipa画框.png",
+          "name" : "ipa画框",
+          "position" : {
+            "scale" : 0.49,
+            "translation-in-points" : [
+              0,
+              162.0625
+            ]
+          }
+        },
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : "multiply"
+            }
+          ],
+          "image-name" : "画框.png",
+          "name" : "画框",
+          "opacity-specializations" : [
+            {
+              "appearance" : "tinted",
+              "value" : 0.28
+            }
+          ],
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

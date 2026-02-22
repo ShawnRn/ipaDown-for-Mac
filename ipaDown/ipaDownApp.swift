@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+#if os(macOS)
 import Sparkle
+#endif
 
 @main
 struct ipaDownApp: App {
+    #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #endif
     @AppStorage("theme") private var theme = "auto"
     @State private var accountManager = AccountManager()
     @State private var searchManager = SearchManager()
@@ -35,18 +39,21 @@ struct ipaDownApp: App {
                 .environment(navigationManager)
                 .preferredColorScheme(theme == "light" ? .light : (theme == "dark" ? .dark : nil))
                 .id(theme) // 强制视图树重建以重新评估环境值
+                #if os(macOS)
                 .onAppear {
                     applyTheme(theme)
                 }
                 .onChange(of: theme) { _, newValue in
                     applyTheme(newValue)
                 }
+                #endif
                 .task {
                     // 启动时关联管理器并刷新 Token
                     downloadManager.accountManager = accountManager
                     await accountManager.refreshAllTokens()
                 }
         }
+        #if os(macOS)
         .defaultSize(width: 1000, height: 700)
         .commands {
             CommandGroup(replacing: .appSettings) {
@@ -64,8 +71,10 @@ struct ipaDownApp: App {
                 }
             }
         }
+        #endif
     }
     
+    #if os(macOS)
     private func applyTheme(_ theme: String) {
         DispatchQueue.main.async {
             switch theme {
@@ -78,4 +87,5 @@ struct ipaDownApp: App {
             }
         }
     }
+    #endif
 }

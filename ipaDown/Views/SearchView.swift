@@ -72,61 +72,106 @@ struct SearchView: View {
                 Task { await searchManager.search() }
             }
             
-            HStack(spacing: 16) {
-                // 商店国家/地区选择
-                HStack(spacing: 6) {
-                    Text("商店国家/地区:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Picker("", selection: $manager.countryCode) {
-                        if accountManager.availableCountryCodes.isEmpty {
-                            Text("未登录账号").tag("CN")
-                        } else {
-                            ForEach(accountManager.availableCountryCodes, id: \.self) { code in
-                                Text("\(CountryCodes.countryName(for: code)) (\(code))").tag(code)
-                            }
-                        }
-                    }
-                    .frame(width: 130)
-                    .onChange(of: manager.countryCode) { _, newValue in
-                        accountManager.switchToAccount(forCountryCode: newValue)
-                    }
+            ViewThatFits(in: .horizontal) {
+                // Wide layout (iPad landscape, macOS)
+                HStack(spacing: 16) {
+                    searchFiltersContent
                 }
                 
-                // 设备类型
-                Picker("", selection: $manager.deviceType) {
-                    ForEach(DeviceType.allCases, id: \.self) { type in
-                        Text(type.displayName).tag(type)
+                // Narrow layout (iPhone portrait)
+                VStack(spacing: 10) {
+                    HStack(spacing: 12) {
+                        // 商店国家/地区选择
+                        countryPicker
+                        Spacer()
+                        // 设备类型
+                        deviceTypePicker
+                    }
+                    HStack {
+                        resultLimitPicker
+                        Spacer()
+                        searchButton
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 150)
-                
-                // 数量
-                HStack(spacing: 6) {
-                    Text("数量:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Picker("", selection: $manager.resultLimit) {
-                        Text("5").tag(5)
-                        Text("10").tag(10)
-                        Text("20").tag(20)
-                        Text("50").tag(50)
-                    }
-                    .frame(width: 70)
-                }
-                
-                Spacer()
-                
-                Button("搜索") {
-                    Task { await searchManager.search() }
-                }
-                .keyboardShortcut(.defaultAction)
-                // 显式指定标准样式，避免变回纯文本
-                .buttonStyle(.borderedProminent)
-                .disabled(searchManager.searchText.isEmpty || searchManager.isSearching)
             }
         }
+    }
+    
+    @ViewBuilder
+    private var searchFiltersContent: some View {
+        // 商店国家/地区选择
+        countryPicker
+        
+        // 设备类型
+        deviceTypePicker
+        
+        // 数量
+        resultLimitPicker
+        
+        Spacer()
+        
+        searchButton
+    }
+    
+    private var countryPicker: some View {
+        @Bindable var manager = searchManager
+        return HStack(spacing: 6) {
+            Text("商店:")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Picker("", selection: $manager.countryCode) {
+                if accountManager.availableCountryCodes.isEmpty {
+                    Text("未登录").tag("CN")
+                } else {
+                    ForEach(accountManager.availableCountryCodes, id: \.self) { code in
+                        Text("\(CountryCodes.countryName(for: code)) (\(code))").tag(code)
+                    }
+                }
+            }
+            #if os(macOS)
+            .frame(width: 130)
+            #endif
+            .onChange(of: manager.countryCode) { _, newValue in
+                accountManager.switchToAccount(forCountryCode: newValue)
+            }
+        }
+        .fixedSize()
+    }
+    
+    private var deviceTypePicker: some View {
+        @Bindable var manager = searchManager
+        return Picker("", selection: $manager.deviceType) {
+            ForEach(DeviceType.allCases, id: \.self) { type in
+                Text(type.displayName).tag(type)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 150)
+    }
+    
+    private var resultLimitPicker: some View {
+        @Bindable var manager = searchManager
+        return HStack(spacing: 6) {
+            Text("数量:")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Picker("", selection: $manager.resultLimit) {
+                Text("5").tag(5)
+                Text("10").tag(10)
+                Text("20").tag(20)
+                Text("50").tag(50)
+            }
+            .frame(width: 70)
+        }
+    }
+    
+    private var searchButton: some View {
+        Button("搜索") {
+            Task { await searchManager.search() }
+        }
+        .keyboardShortcut(.defaultAction)
+        .buttonStyle(.borderedProminent)
+        .disabled(searchManager.searchText.isEmpty || searchManager.isSearching)
     }
     
     // MARK: - 搜索结果列表

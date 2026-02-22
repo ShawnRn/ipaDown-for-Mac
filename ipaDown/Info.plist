@@ -8,10 +8,54 @@
 	<string>https://raw.githubusercontent.com/ShawnRn/ipaDown-for-Mac/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>bjptNX8PlJbdwtszqi3/BAHV4TYyZ3UuV1EMANJ+GaY=</string>
+	<key>SUPublicEDKey</key>
+	<string>bjptNX8PlJbdwtszqi3/BAHV4TYyZ3UuV1EMANJ+GaY=</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
 		<string>zh-Hans</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>iOS App Archive</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.apple.itunes.ipa</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSFileProviderUsageDescription</key>
+	<string>我们需要访问文件提供程序来管理并分享已下载的 IPA 安装包。</string>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.apple.package</string>
+				<string>public.composite-content</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>iOS App Archive</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.apple.itunes.ipa</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ipa</string>
+				</array>
+			</dict>
+		</dict>
 	</array>
 </dict>
 </plist>

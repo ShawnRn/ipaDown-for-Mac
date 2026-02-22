@@ -58,7 +58,7 @@
    ```
 
 2. **打开项目**
-   使用 Xcode 打开 `ipaDown-for-Mac.xcodeproj` 文件。
+   使用 Xcode 打开 `ipaDown-for-Apple.xcodeproj` 文件。
 
 3. **编译运行**
    选择 `ipaDown` Scheme，按下 `Cmd + R` 即可运行。

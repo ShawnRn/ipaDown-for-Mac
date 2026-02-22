@@ -127,11 +127,13 @@ struct ChangelogView: View {
             }
             .padding(16)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.platformWindowBackground)
     }
 }
 
 #Preview {
     ChangelogView()
+        #if os(macOS)
         .frame(width: 500, height: 400)
+        #endif
 }

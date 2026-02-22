@@ -126,7 +126,7 @@ struct TaskInspectorView: View {
             }
         }
         .frame(width: 320)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Color.platformControlBackground)
         .overlay(alignment: .leading) {
             Divider()
         }

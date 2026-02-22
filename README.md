@@ -59,7 +59,7 @@ Download the latest `.dmg` installer from the [Releases](https://github.com/Shaw
    ```
 
 2. **Open the project**
-   Open `ipaDown-for-Mac.xcodeproj` in Xcode.
+   Open `ipaDown-for-Apple.xcodeproj` in Xcode.
 
 3. **Build and Run**
    Select the `ipaDown` scheme and hit `Cmd + R` to run.

@@ -12,6 +12,7 @@ struct ContentView: View {
     @Environment(NavigationManager.self) private var nav
     
     var body: some View {
+        #if os(macOS)
         NavigationSplitView {
             SidebarView()
                 .navigationSplitViewColumnWidth(200)
@@ -38,8 +39,51 @@ struct ContentView: View {
                     }
                 }
         }
+        #else
+        @Bindable var navBindable = nav
+        
+        TabView(selection: $navBindable.selectedPage) {
+            Tab("App 搜索", systemImage: "magnifyingglass", value: .search) {
+                NavigationStack {
+                    SearchView()
+                }
+            }
+            
+            Tab("账号管理", systemImage: "person.crop.circle", value: .accounts) {
+                NavigationStack {
+                    AccountView()
+                }
+            }
+            
+            Tab("历史版本", systemImage: "clock.arrow.circlepath", value: .versions) {
+                NavigationStack {
+                    VersionView()
+                }
+            }
+            
+            Tab("下载管理", systemImage: "arrow.down.circle", value: .downloads) {
+                NavigationStack {
+                    DownloadView()
+                }
+            }
+            
+            Tab("设置", systemImage: "gearshape", value: .settings) {
+                NavigationStack {
+                    SettingsView()
+                }
+            }
+            
+            Tab("关于", systemImage: "info.circle", value: .about) {
+                NavigationStack {
+                    AboutView()
+                }
+            }
+        }
+        .tabViewStyle(.sidebarAdaptable)
+        #endif
     }
     
+    #if os(macOS)
     @ViewBuilder
     private var detailView: some View {
         ZStack {
@@ -84,6 +128,7 @@ struct ContentView: View {
             removal: .move(edge: .leading).combined(with: .opacity)
         )
     }
+    #endif
 }
 
 struct LiquidBlurModifier: ViewModifier {

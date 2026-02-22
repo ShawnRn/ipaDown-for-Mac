@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+#if os(macOS)
 import Sparkle
+#endif
 
 struct AboutView: View {
     @State private var showLicenses = false
@@ -19,12 +21,13 @@ struct AboutView: View {
             VStack(spacing: 32) {
                 // App Logo & Basic Info
                 VStack(spacing: 16) {
-                    Image(nsImage: NSApplication.shared.applicationIconImage)
+                    PlatformImage.appIcon
                         .resizable()
                         .interpolation(.high)
                         .antialiased(true)
                         .frame(width: 100, height: 100)
-                        .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
                         .background {
                             Circle()
                                 .fill(Color.accentColor.opacity(0.1))
@@ -54,7 +57,9 @@ struct AboutView: View {
                     }
                     .sheet(isPresented: $showLicenses) {
                         LicenseView()
+                            #if os(macOS)
                             .frame(width: 550, height: 450)
+                            #endif
                     }
                     
                     AboutLinkButton(icon: "globe", title: "GitHub", isExternal: true, url: "https://github.com/ShawnRn/ipaDown-for-Mac")
@@ -64,7 +69,9 @@ struct AboutView: View {
                     }
                     .sheet(isPresented: $showChangelog) {
                         ChangelogView()
+                            #if os(macOS)
                             .frame(width: 550, height: 450)
+                            #endif
                     }
                 }
             }
@@ -73,6 +80,7 @@ struct AboutView: View {
             
             // Check for Updates Section
             VStack(spacing: 12) {
+                #if os(macOS)
                 Button {
                     // 优先使用静态 shared 实例访问，如果失败则尝试强转系统 delegate
                     if let delegate = AppDelegate.shared {
@@ -91,6 +99,7 @@ struct AboutView: View {
                         .foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.plain)
+                #endif
                 
                 Text("Made with ❤️ by Shawn Rain")
                     .font(.caption2)

@@ -126,7 +126,7 @@ struct VersionView: View {
     private var headerSection: some View {
         VStack(spacing: 12) {
             if let app = versionManager.currentApp {
-                // 当前查看的 App
+                // App 信息行
                 HStack(spacing: 12) {
                     AsyncImage(url: app.bestIconURL) { image in
                         image.resizable().aspectRatio(contentMode: .fill)
@@ -140,13 +140,25 @@ struct VersionView: View {
                     VStack(alignment: .leading) {
                         Text(app.trackName)
                             .font(.headline)
-                        Text("ID: \(app.trackId) · 当前版本: v\(app.version)")
+                            .lineLimit(1)
+                        Text("ID: \(app.trackId) · v\(app.version)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                     
                     Spacer()
                     
+                    Text("\(versionManager.versions.count) 个版本")
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.blue.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                
+                // 控制行：数据源 + 免更新 + 加载中
+                HStack(spacing: 12) {
                     // 数据源选择
                     Menu {
                         Picker("数据源", selection: Bindable(versionManager).versionSource) {
@@ -162,10 +174,11 @@ struct VersionView: View {
                             .background(.secondary.opacity(0.1))
                             .clipShape(Capsule())
                     }
+                    #if os(macOS)
                     .menuStyle(.borderlessButton)
+                    #endif
                     .foregroundStyle(.primary)
                     .onChange(of: versionManager.versionSource) { _, _ in
-                        // 切换源后重新加载
                         Task {
                             if let account = accountManager.activeAccount {
                                 await versionManager.loadVersions(account: account, app: app, accountManager: accountManager)
@@ -173,34 +186,34 @@ struct VersionView: View {
                         }
                     }
                     
-                    // 免更新开关
+                    // 免更新开关（紧凑布局）
                     Toggle("免更新", isOn: Bindable(versionManager).skipUpdate)
+                        #if os(macOS)
                         .toggleStyle(.checkbox)
+                        #endif
                         .font(.caption)
+                        .fixedSize()
                     
                     if versionManager.loadingDetailCount > 0 {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             ProgressView()
                                 .controlSize(.small)
-                            Text("加载详情中 (\(versionManager.loadingDetailCount))")
+                            Text("\(versionManager.loadingDetailCount)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
                     
-                    Text("\(versionManager.versions.count) 个版本")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.blue.opacity(0.1))
-                        .clipShape(Capsule())
+                    Spacer()
                 }
             } else {
                 // 手动输入 App ID
                 HStack(spacing: 10) {
                     TextField("输入 App ID", text: $manualAppId)
                         .textFieldStyle(.roundedBorder)
+                        #if os(macOS)
                         .frame(width: 200)
+                        #endif
                     
                     Button("查询版本") {
                         Task { await loadVersionsForManualId() }
@@ -219,7 +232,29 @@ struct VersionView: View {
     
     // MARK: - 版本列表
     
+    @ViewBuilder
     private var versionsList: some View {
+        versionsListContent
+            .overlay(alignment: .bottom) {
+                if versionManager.isLoadingMore {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("加载更多...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(8)
+                    .background(.regularMaterial)
+                    .cornerRadius(8)
+                    .padding(.bottom, 16)
+                }
+            }
+    }
+    
+    @ViewBuilder
+    private var versionsListContent: some View {
+        #if os(macOS)
         Table(sortedVersions, sortOrder: $sortOrder) {
             TableColumn("版本号", value: \.displayVersionComparable) { version in
                 HStack {
@@ -236,7 +271,6 @@ struct VersionView: View {
                 .padding(.vertical, 4)
                 .frame(minHeight: 24)
                 .onAppear {
-                    // 如果是最后几个元素之一，触发加载下一页
                     if version == versionManager.versions.last {
                         Task {
                             if let account = accountManager.activeAccount {
@@ -275,24 +309,54 @@ struct VersionView: View {
             .width(min: 80, ideal: 100)
         }
         .tableStyle(.inset)
-        // 底部加载更多指示器 (Table 底部不好加 View，只能通过 Overlay 或者外部 VStack)
-        // 这里简单处理，如果 isLoadingMore，在表格底部覆盖一个 loading
-        .overlay(alignment: .bottom) {
-            if versionManager.isLoadingMore {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("加载更多...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        #else
+        List(sortedVersions) { version in
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        if let v = version.displayVersion {
+                            Text("v\(v)")
+                                .font(.headline)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Text(version.formattedDate)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("ID: \(version.externalVersionId)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-                .padding(8)
-                .background(.regularMaterial)
-                .cornerRadius(8)
-                .padding(.bottom, 16)
+                
+                Spacer()
+                
+                Button("下载") {
+                    downloadVersion(version)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(accountManager.activeAccount == nil)
+            }
+            .padding(.vertical, 2)
+            .onAppear {
+                if version == versionManager.versions.last {
+                    Task {
+                        if let account = accountManager.activeAccount {
+                            await versionManager.loadNextPage(account: account)
+                        }
+                    }
+                }
             }
         }
+        .listStyle(.plain)
+        #endif
     }
+    
     
     // MARK: - Actions
     

@@ -43,12 +43,25 @@ class DownloadManager {
         if let path = UserDefaults.standard.string(forKey: "DownloadDirectory") {
             self.downloadDirectory = URL(fileURLWithPath: path)
         } else {
+            #if os(macOS)
             self.downloadDirectory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
                 .appendingPathComponent("ipaDown", isDirectory: true)
+            #else
+            self.downloadDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+                .appendingPathComponent("ipaDown", isDirectory: true)
+            #endif
         }
         
         // 确保目录存在
         try? FileManager.default.createDirectory(at: downloadDirectory, withIntermediateDirectories: true)
+        
+        #if os(iOS)
+        // 在 iOS 上创建一个空的 .localized 或是占位文件，有助于「文件」App 识别该目录
+        let placeholderURL = downloadDirectory.appendingPathComponent(".initialized")
+        if !FileManager.default.fileExists(atPath: placeholderURL.path) {
+            try? "".data(using: .utf8)?.write(to: placeholderURL)
+        }
+        #endif
         
         // 加载持久化的任务
         loadTasks()
@@ -223,23 +236,27 @@ class DownloadManager {
                 logger.error("下载", "自动刷新 Token 失败")
                 return
             } catch {
-                task.status = .failed
                 let errorMsg = error.localizedDescription
+                
+                // 特殊处理 "unknown error"：如果是系统/苹果接口抽风导致，我们在第一遍重试失败后，仍然允许再进行一次透明的补充重试
+                let isUnknown = errorMsg.lowercased().contains("unknown error")
+                
+                if isUnknown && retryCount < 2 {
+                    retryCount += 1
+                    logger.warning("下载", "检测到疑似竞态的未知错误 (Unknown error)，尝试第 \(retryCount) 次透明重试...")
+                    try? await Task.sleep(for: .milliseconds(800))
+                    continue
+                }
+                
+                task.status = .failed
                 task.error = errorMsg
                 logger.error("下载", "下载失败: \(errorMsg)")
-                
-                // 如果是手动刷新后依然失败且没有进入 TokenExpired 逻辑
-                // 可能是由于 StoreFront 之前丢失了导致服务器仍然报错。
-                // 现在的 AuthService 已经通过保留 StoreFront 修复了此点。
                 return
             }
         }
     }
     
     private func performDownloadAndPostProcess(task: IPADownloadTask, info: DownloadInfo) async throws {
-        // 3. 下载文件
-        task.status = .downloading
-        let filePath = downloadDirectory.appendingPathComponent(task.fileName)
         
         try await DownloadService.downloadFile(
             from: info.downloadURL,
@@ -324,22 +341,27 @@ class DownloadManager {
         logger.info("下载", "已取消并删除任务: \(task.appName)")
     }
     
-    /// 在 Finder 中显示
+    /// 在 Finder 中显示（仅 macOS）
     func showInFinder(_ task: IPADownloadTask) {
+        #if os(macOS)
         if let path = task.filePath {
             NSWorkspace.shared.selectFile(path.path, inFileViewerRootedAtPath: "")
         } else {
             NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: downloadDirectory.path)
         }
+        #endif
     }
     
-    /// 打开下载目录
+    /// 打开下载目录（仅 macOS）
     func showDownloadFolder() {
+        #if os(macOS)
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: downloadDirectory.path)
+        #endif
     }
     
-    /// 选择下载目录
+    /// 选择下载目录（仅 macOS）
     func selectDownloadDirectory() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -350,6 +372,7 @@ class DownloadManager {
         if panel.runModal() == .OK, let url = panel.url {
             downloadDirectory = url
         }
+        #endif
     }
     
     /// 清除已完成的任务

@@ -234,44 +234,57 @@ struct AccountView: View {
     private var twoFactorSheet: some View {
         @Bindable var manager = accountManager
         
-        return VStack(spacing: 20) {
-            Image(systemName: "lock.shield")
-                .font(.system(size: 50))
+        return VStack(spacing: 24) {
+            Image(systemName: "shield.checkered")
+                .font(.system(size: 60))
                 .foregroundStyle(.blue)
+                .symbolEffect(.bounce, value: accountManager.needsTwoFactorCode)
             
-            Text("两步验证")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("请输入发送到你的设备上的验证码")
-                .font(.body)
-                .foregroundStyle(.secondary)
+            VStack(spacing: 8) {
+                Text("双重验证")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                Text("请输入发送到你设备上的 6 位验证码")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             
             // Apple 风格 6 位验证码输入
             OTPInputView(code: $manager.twoFactorCode, onComplete: {
                 submitTwoFactor()
             })
+            .padding(.vertical, 10)
             
             if let error = accountManager.errorMessage {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
             }
             
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Button("取消") {
                     accountManager.needsTwoFactorCode = false
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
                 
-                Button("提交") {
+                Spacer()
+                
+                Button("验证") {
                     submitTwoFactor()
                 }
-                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .disabled(accountManager.twoFactorCode.count < 6 || accountManager.isLoggingIn)
             }
         }
         .padding(40)
-        .frame(width: 400)
+        .background(Color.platformWindowBackground)
+        #if os(macOS)
+        .frame(width: 440)
+        #endif
     }
     
     private func submitTwoFactor() {
@@ -286,124 +299,84 @@ struct OTPInputView: View {
     @Binding var code: String
     var onComplete: () -> Void
     
-    @FocusState private var focusedIndex: Int?
-    @State private var digits: [String] = Array(repeating: "", count: 6)
+    @FocusState private var isFocused: Bool
     
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<6, id: \.self) { index in
-                OTPDigitBox(
-                    digit: $digits[index],
-                    isFocused: focusedIndex == index
-                )
-                .focused($focusedIndex, equals: index)
-                .onChange(of: digits[index]) { _, newValue in
-                    handleInput(at: index, value: newValue)
+        ZStack {
+            // 隐藏的真实输入框，负责接收所有输入和退格
+            TextField("", text: $code)
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                #endif
+                .focused($isFocused)
+                // 使其完全透明并位于底层
+                .opacity(0.01)
+                .frame(width: 1, height: 1)
+                .onChange(of: code) { _, newValue in
+                    // 只保留前 6 位数字
+                    let filtered = String(newValue.filter { $0.isNumber }.prefix(6))
+                    if filtered != newValue {
+                        code = filtered
+                    }
+                    if filtered.count == 6 {
+                        // 延迟一丁点确保状态更新
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            onComplete()
+                        }
+                    }
                 }
-                .onKeyPress(.delete) {
-                    handleDelete(at: index)
-                    return .handled
-                }
-                
-                // 在第 3 位和第 4 位之间加分隔
-                if index == 2 {
-                    Text("–")
-                        .font(.title2)
-                        .foregroundStyle(.quaternary)
+            
+            // 显示给用户看的 6 个盒子
+            HStack(spacing: 12) {
+                ForEach(0..<6, id: \.self) { index in
+                    box(at: index)
                 }
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isFocused = true
         }
         .onAppear {
-            focusedIndex = 0
-            syncFromCode()
-        }
-        .onChange(of: code) { _, _ in
-            syncFromCode()
+            isFocused = true
         }
     }
     
-    private func handleInput(at index: Int, value: String) {
-        // 处理粘贴多位数字
-        if value.count > 1 {
-            let filtered = String(value.filter { $0.isNumber }.prefix(6))
-            fillDigits(from: filtered, startingAt: index)
-            return
-        }
+    @ViewBuilder
+    private func box(at index: Int) -> some View {
+        let char = getChar(at: index)
+        let isActive = isFocused && (code.count == index || (code.count == 6 && index == 5))
         
-        // 只允许数字
-        let filtered = value.filter { $0.isNumber }
-        if filtered != value {
-            digits[index] = filtered
-            return
-        }
-        
-        syncToCode()
-        
-        // 自动跳到下一格
-        if !filtered.isEmpty && index < 5 {
-            focusedIndex = index + 1
-        }
-        
-        // 6 位填满自动提交
-        if code.count == 6 {
-            onComplete()
-        }
-    }
-    
-    private func handleDelete(at index: Int) {
-        if digits[index].isEmpty && index > 0 {
-            focusedIndex = index - 1
-            digits[index - 1] = ""
-        } else {
-            digits[index] = ""
-        }
-        syncToCode()
-    }
-    
-    
-    private func fillDigits(from text: String, startingAt start: Int) {
-        for (offset, char) in text.enumerated() {
-            let idx = start + offset
-            if idx < 6 {
-                digits[idx] = String(char)
+        VStack(spacing: 0) {
+            Text(char)
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
+                .frame(width: 46, height: 56)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.platformControlBackground)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isActive ? Color.blue : Color.secondary.opacity(0.2), lineWidth: isActive ? 2 : 1)
+                )
+                // 聚焦时的微光效果
+                .shadow(color: isActive ? Color.blue.opacity(0.15) : Color.clear, radius: 4, x: 0, y: 0)
+            
+            // 下划线分隔（可选，Apple 风格通常不需要，但增加辨识度）
+            if index == 2 {
+                // 这里如果不想要下划线可以去掉，原代码有个 "-" 符号
             }
         }
-        syncToCode()
-        let nextFocus = min(start + text.count, 5)
-        focusedIndex = nextFocus
-        if code.count == 6 {
-            onComplete()
+        // 在第 2 和第 3 个盒子后加一点间距
+        .padding(.trailing, index == 2 ? 8 : 0)
+    }
+    
+    private func getChar(at index: Int) -> String {
+        if index < code.count {
+            let idx = code.index(code.startIndex, offsetBy: index)
+            return String(code[idx])
         }
-    }
-    
-    private func syncToCode() {
-        code = digits.joined()
-    }
-    
-    private func syncFromCode() {
-        let chars = Array(code)
-        for i in 0..<6 {
-            digits[i] = i < chars.count ? String(chars[i]) : ""
-        }
-    }
-}
-
-struct OTPDigitBox: View {
-    @Binding var digit: String
-    var isFocused: Bool
-    
-    var body: some View {
-        TextField("", text: $digit)
-            .frame(width: 44, height: 52)
-            .multilineTextAlignment(.center)
-            .font(.system(size: 24, weight: .medium, design: .rounded))
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.background)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isFocused ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: isFocused ? 2 : 1)
-            )
+        return ""
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 /// 下载任务状态
-enum DownloadStatus: String, Codable {
+enum DownloadStatus: String, Codable, CustomStringConvertible {
     case waiting = "waiting"
     case purchasing = "purchasing"
     case fetchingInfo = "fetchingInfo"
@@ -31,6 +31,10 @@ enum DownloadStatus: String, Codable {
         case .failed: "失败"
         case .paused: "已暂停"
         }
+    }
+    
+    var description: String {
+        displayName
     }
     
     var isActive: Bool {
@@ -85,6 +89,10 @@ class IPADownloadTask: Identifiable, Codable {
         } else {
             return received
         }
+    }
+    
+    var totalBytesString: String {
+        ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
     }
     
     // MARK: - Codable

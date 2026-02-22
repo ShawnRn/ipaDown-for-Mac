@@ -5,6 +5,7 @@
 //  Created by Shawn Rain on 2026/2/14.
 //
 
+#if os(macOS)
 import AppKit
 import Sparkle
 
@@ -36,7 +37,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             AppLogger.shared.error("Updater", "未找到 SUFeedURL配置")
         }
         
-        if let hasKey = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") {
+        if Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") != nil {
             AppLogger.shared.info("Updater", "EdDSA 公钥已配置")
         } else {
             AppLogger.shared.error("Updater", "未找到 SUPublicEDKey 配置")
@@ -56,3 +57,4 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 }
+#endif
