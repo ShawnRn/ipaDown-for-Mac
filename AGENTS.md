@@ -8,7 +8,7 @@
 
 **ipaDown** 是一款使用 Swift + SwiftUI 构建的 **macOS 原生应用**，用于从 Apple App Store 下载 IPA 文件。它通过 Apple 的私有 plist API 实现用户认证、应用购买、历史版本查询、分块下载和签名注入。
 
-- **最低系统要求**: macOS 14.0+
+- **最低系统要求**: macOS 26.0+
 - **Swift 版本**: Swift 6（严格并发模式）
 - **UI 框架**: SwiftUI
 - **Bundle ID**: `com.shawnrain.ipaDown`

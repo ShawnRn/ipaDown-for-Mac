@@ -205,34 +205,30 @@ struct DownloadTaskRow: View {
             .opacity(isHovering ? 1 : 0)
             #else
             HStack(spacing: 8) {
-                if task.status == .completed {
-                    // 分享单独拉出来，规避 Menu 内部触发 ShareSheet 可能导致的 SwiftUI 挂死
-                    Button {
-                        onShare()
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.blue)
-                            .frame(width: 36, height: 36)
-                            .clipShape(Circle())
-                            .background(Color.blue.opacity(0.1).clipShape(Circle()))
-                    }
-                }
-                
                 Menu {
-                    if task.status != .completed {
-                        Button {
-                            onTogglePause()
-                        } label: {
-                            if task.status.isActive || task.status == .waiting {
-                                Label("暂停", systemImage: "pause.fill")
-                            } else {
-                                Label("继续下载", systemImage: "play.fill")
+                    Group {
+                        if task.status == .completed {
+                            Button {
+                                onShare()
+                            } label: {
+                                Label("分享", systemImage: "square.and.arrow.up")
                             }
+                            
+                            Divider()
+                        } else {
+                            Button {
+                                onTogglePause()
+                            } label: {
+                                if task.status.isActive || task.status == .waiting {
+                                    Label("暂停", systemImage: "pause.fill")
+                                } else {
+                                    Label("继续下载", systemImage: "play.fill")
+                                }
+                            }
+                            
+                            Divider()
                         }
                     }
-                    
-                    Divider()
                     
                     Button(role: .destructive) {
                         onRemove()

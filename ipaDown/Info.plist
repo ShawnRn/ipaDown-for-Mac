@@ -26,6 +26,8 @@
 			<string>iOS App Archive</string>
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>com.apple.itunes.ipa</string>
