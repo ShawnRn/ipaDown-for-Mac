@@ -13,6 +13,7 @@ struct AccountView: View {
     @State private var isRefreshing = false
     @State private var showingRefreshResult = false
     @State private var refreshResultTitle = ""
+    @State private var refreshResultMessage = ""
     @State private var showingAddAccount = false
     
     var body: some View {
@@ -220,6 +221,16 @@ struct AccountView: View {
             .disabled(accountManager.isLoggingIn || accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty)
             
             Spacer()
+        }
+    }
+    
+    private func performLogin() {
+        guard !accountManager.isLoggingIn else { return }
+        Task {
+            await accountManager.login()
+            if accountManager.errorMessage == nil && !accountManager.needsTwoFactorCode {
+                showingAddAccount = false
+            }
         }
     }
     
