@@ -122,6 +122,16 @@ struct AccountView: View {
                     
                     Spacer(minLength: 16)
                     
+                    // 删除按钮
+                    Button(role: .destructive) {
+                        accountManager.deleteAccount(account)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                    .padding(.trailing, 8)
+                    
                     // 刷新按钮
                     Button {
                         Task {
@@ -156,17 +166,6 @@ struct AccountView: View {
                     .buttonStyle(.glass)
                     .controlSize(.small)
                     .disabled(isActive || isRefreshing)
-                    
-                    // 删除按钮 (仅非激活账号可删，或你原设逻辑均可删除。此处假设当前使用也可删或者遵循原逻辑)
-                    if !isActive {
-                        Button(role: .destructive) {
-                            accountManager.deleteAccount(account)
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.red)
-                    }
                 }
             }
         }

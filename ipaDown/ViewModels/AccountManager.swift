@@ -151,14 +151,51 @@ class AccountManager {
         saveAccounts()
     }
     
+    private var accountsFileURL: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("ipaDown", isDirectory: true)
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        return appSupport.appendingPathComponent("accounts.json")
+    }
+
     private func saveAccounts() {
-        try? KeychainHelper.saveCodable(accounts, forKey: "accounts")
+        if let data = try? JSONEncoder().encode(accounts) {
+            try? data.write(to: accountsFileURL, options: .atomic)
+        }
     }
     
     private func loadAccounts() {
+        // 优先从严格专属沙盒目录读取 (.json 文件)
+        if let data = try? Data(contentsOf: accountsFileURL),
+           let saved = try? JSONDecoder().decode([Account].self, from: data) {
+            accounts = saved
+            activeAccount = accounts.first
+            
+            // 例行清理，防止任何早期版本的残留滞留在 Keychain 或 UserDefaults 中
+            KeychainHelper.delete(forKey: "accounts")
+            UserDefaults.standard.removeObject(forKey: "accounts")
+            return
+        }
+        
+        // 向下兼容并迁移：如果在上一版本迁移中留在了 UserDefaults 里
+        if let data = UserDefaults.standard.data(forKey: "accounts"),
+           let saved = try? JSONDecoder().decode([Account].self, from: data) {
+            accounts = saved
+            activeAccount = accounts.first
+            saveAccounts()
+            UserDefaults.standard.removeObject(forKey: "accounts")
+            KeychainHelper.delete(forKey: "accounts")
+            logger.info("账号", "成功从 UserDefaults 迁移账号数据至私有数据目录文件中，旧有痕迹已抹除")
+            return
+        }
+        
+        // 向下兼容并迁移：如果还有最老版本的残渣留在 Keychain 里
         if let saved = KeychainHelper.loadCodable([Account].self, forKey: "accounts") {
             accounts = saved
             activeAccount = accounts.first
+            saveAccounts()
+            KeychainHelper.delete(forKey: "accounts")
+            logger.info("账号", "成功从旧版 Keychain 迁移账号数据至私有数据目录文件内，原缓存已抹除")
         }
     }
     

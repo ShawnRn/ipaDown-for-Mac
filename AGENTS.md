@@ -145,6 +145,10 @@ ipaDown/
 - 后台密集操作使用 `Task.detached(priority: .userInitiated)`
 - 线程安全值封装使用 `LockedValue<T>` (NSLock)
 
+### 数据持久化规范
+- **卸载无痕约束**：所有敏感凭证（如登录账号、Token）及用户数据**必须**保存在 App 私有的可回收沙盒目录中（如 `Application Support/ipaDown/` 下存放 `.json`）。
+- **禁止持久残留**：严禁使用脱离应用生命周期的系统级存储（如公共 `Keychain` 或无沙盒隔离的暴露版 `UserDefaults`）来存放账号等信息，确保在各系统（如 macOS）上卸载 App 时能实现**数据彻底销毁、零痕迹残留**。
+
 ### UI 规范
 - 所有界面文本使用中文
 - 使用系统 accent color 作为主色调
