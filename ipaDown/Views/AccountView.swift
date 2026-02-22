@@ -405,7 +405,8 @@ struct AccountView: View {
         .background(Color.platformWindowBackground)
         .frame(width: 440)
         #else
-        .padding()
+        .padding(32)
+        .frame(maxWidth: 400)
         #endif
     }
     
@@ -430,16 +431,24 @@ struct OTPInputView: View {
     
     var body: some View {
         ZStack {
-            // 隐藏的真实输入框，负责接收所有输入和退格
+            // 显示给用户看的 6 个盒子
+            HStack(spacing: 12) {
+                ForEach(0..<6, id: \.self) { index in
+                    box(at: index)
+                }
+            }
+            
+            // 隐藏的真实输入框覆盖在最上层，充当巨大点击热区
             TextField("", text: $code)
                 #if os(iOS)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 #endif
                 .focused($isFocused)
-                // 使其完全透明并位于底层
-                .opacity(0.01)
-                .frame(width: 1, height: 1)
+                // 使其文字与光标完全透明
+                .foregroundStyle(.clear)
+                .tint(.clear)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onChange(of: code) { _, newValue in
                     // 只保留前 6 位数字
                     let filtered = String(newValue.filter { $0.isNumber }.prefix(6))
@@ -453,20 +462,11 @@ struct OTPInputView: View {
                         }
                     }
                 }
-            
-            // 显示给用户看的 6 个盒子
-            HStack(spacing: 12) {
-                ForEach(0..<6, id: \.self) { index in
-                    box(at: index)
-                }
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            isFocused = true
         }
         .onAppear {
-            isFocused = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isFocused = true
+            }
         }
     }
     
