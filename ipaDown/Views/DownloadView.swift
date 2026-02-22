@@ -201,12 +201,25 @@ struct DownloadTaskRow: View {
             }
             .opacity(isHovering ? 1 : 0)
             #else
-            HStack(spacing: 4) {
+            HStack(spacing: 8) {
                 if task.status == .completed {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                         .font(.system(size: 20))
+                    
+                    // 分享单独拉出来，规避 Menu 内部触发 ShareSheet 可能导致的 SwiftUI 挂死
+                    Button {
+                        onShare()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.blue)
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                            .background(Color.blue.opacity(0.1).clipShape(Circle()))
+                    }
                 }
+                
                 Menu {
                     if task.status != .completed {
                         Button {
@@ -231,22 +244,11 @@ struct DownloadTaskRow: View {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                
-                // 分享单独拉出来，规避 Menu 内部触发 ShareSheet 可能导致的 SwiftUI 挂死
-                if task.status == .completed {
-                    Button {
-                        onShare()
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.blue)
-                            .frame(width: 44, height: 44)
-                    }
+                        .frame(width: 36, height: 36)
+                        .background(Color.secondary.opacity(0.1).clipShape(Circle()))
                 }
             }
+            .frame(maxHeight: .infinity, alignment: .center)
             #endif
         }
         .padding(.vertical, 6)
