@@ -161,7 +161,7 @@ nonisolated enum SignatureService {
 
 // MARK: - 模型定义
 
-private struct PackageManifest: Decodable, Sendable {
+private nonisolated struct PackageManifest: Decodable, Sendable {
     let sinfPaths: [String]
     
     enum CodingKeys: String, CodingKey {
@@ -169,6 +169,6 @@ private struct PackageManifest: Decodable, Sendable {
     }
 }
 
-private struct PackageInfo: Sendable {
+private nonisolated struct PackageInfo: Sendable {
     let bundleExecutable: String
 }

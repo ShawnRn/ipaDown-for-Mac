@@ -75,10 +75,10 @@ struct TaskInspectorView: View {
                         InspectorSection(title: "速度走势") {
                             Text("\(task.speed)")
                                 .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Color.accentColor)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.1))
+                                .background(Color.accentColor.opacity(0.1))
                                 .clipShape(Capsule())
                         } content: {
                             SpeedChartView(history: task.speedHistory, isComplete: task.status == .completed)
@@ -134,7 +134,7 @@ struct TaskInspectorView: View {
     
     private var statusColor: Color {
         switch task.status {
-        case .downloading: return .blue
+        case .downloading: return Color.accentColor
         case .completed: return .green
         case .failed: return .red
         default: return .secondary

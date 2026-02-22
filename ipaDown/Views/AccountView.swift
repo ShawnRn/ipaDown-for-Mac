@@ -85,7 +85,7 @@ struct AccountView: View {
                 HStack {
                     Image(systemName: isActive ? "person.crop.circle.fill.badge.checkmark" : "person.crop.circle")
                         .font(.system(size: 40))
-                        .foregroundStyle(isActive ? .blue : .secondary)
+                        .foregroundStyle(isActive ? Color.accentColor : .secondary)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(account.displayName)
@@ -103,7 +103,7 @@ struct AccountView: View {
                                 .font(.caption)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(isActive ? .blue.opacity(0.1) : .secondary.opacity(0.1))
+                                .background(isActive ? Color.accentColor.opacity(0.1) : .secondary.opacity(0.1))
                                 .clipShape(Capsule())
                         }
                         
@@ -174,7 +174,7 @@ struct AccountView: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(isActive ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+                .stroke(isActive ? Color.accentColor.opacity(0.5) : Color.clear, lineWidth: 2)
         )
     }
     
@@ -189,7 +189,7 @@ struct AccountView: View {
                 // 左侧应用/Apple 图标
                 ZStack {
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 60, height: 60)
                     
                     Image(systemName: "applelogo")
@@ -319,7 +319,7 @@ struct AccountView: View {
                             ProgressView()
                         } else {
                             Text("登录")
-                                .foregroundStyle((accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty) ? Color.secondary : Color.blue)
+                                .foregroundStyle((accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty) ? Color.secondary : Color.accentColor)
                         }
                         Spacer()
                     }
@@ -361,7 +361,7 @@ struct AccountView: View {
             VStack(spacing: 16) {
                 Image(systemName: "shield.checkered")
                     .font(.system(size: 60))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Color.accentColor)
                     .symbolEffect(.bounce, value: accountManager.needsTwoFactorCode)
                 
                 VStack(spacing: 8) {
@@ -504,10 +504,10 @@ struct OTPInputView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(isActive ? Color.blue : Color.secondary.opacity(0.2), lineWidth: isActive ? 2 : 1)
+                        .stroke(isActive ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isActive ? 2 : 1)
                 )
                 // 聚焦时的微光效果
-                .shadow(color: isActive ? Color.blue.opacity(0.15) : Color.clear, radius: 4, x: 0, y: 0)
+                .shadow(color: isActive ? Color.accentColor.opacity(0.15) : Color.clear, radius: 4, x: 0, y: 0)
             
             // 下划线分隔（可选，Apple 风格通常不需要，但增加辨识度）
             if index == 2 {
