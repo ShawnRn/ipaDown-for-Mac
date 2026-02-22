@@ -53,7 +53,8 @@ struct AccountView: View {
             NavigationStack {
                 iOSLoginSection
             }
-            .presentationDetents([.medium])
+            // iPad 上使用默认的大尺寸居中浮层，iPhone 上使用半屏弹起
+            .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [] : [.medium])
             #endif
         }
         .sheet(isPresented: .init(
@@ -111,7 +112,7 @@ struct AccountView: View {
                 Divider()
                 
                 HStack {
-                    Text("Apple ID: \(account.appleId)")
+                    Text("Apple 账户: \(account.appleId)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -204,7 +205,7 @@ struct AccountView: View {
                     
                     // 输入框组
                     VStack(spacing: 0) {
-                        TextField("Apple ID", text: $manager.loginEmail)
+                        TextField("Apple 账户", text: $manager.loginEmail)
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
@@ -274,10 +275,10 @@ struct AccountView: View {
         return Form {
             Section {
                 HStack {
-                    Text("Apple ID")
+                    Text("Apple 账户")
                         .frame(width: 80, alignment: .leading)
                     
-                    TextField("Apple ID", text: $manager.loginEmail)
+                    TextField("Apple 账户", text: $manager.loginEmail)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .textContentType(.emailAddress)
@@ -318,7 +319,7 @@ struct AccountView: View {
                 }
                 .disabled(accountManager.isLoggingIn || accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty)
             } footer: {
-                Text("Apple ID 可用于登录 Apple 的所有服务。")
+                Text("Apple 账户可用于登录 Apple 的所有服务。")
             }
         }
         .navigationTitle("帐户")
