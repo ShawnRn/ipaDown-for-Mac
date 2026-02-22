@@ -34,6 +34,7 @@ struct AccountView: View {
                         }
                     }
                     .padding()
+                    .animation(.spring(response: 0.45, dampingFraction: 0.8), value: accountManager.accounts)
                 }
             }
         }
@@ -159,7 +160,9 @@ struct AccountView: View {
                     
                     // 切换按钮
                     Button {
-                        accountManager.switchAccount(to: account)
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                            accountManager.switchAccount(to: account)
+                        }
                     } label: {
                         Text(isActive ? "当前使用" : "切换")
                     }

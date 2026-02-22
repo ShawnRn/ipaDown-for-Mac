@@ -55,9 +55,9 @@ class AccountManager {
                 code: twoFactorCode
             )
             
-            // 检查是否已存在该账号
+            // 检查是否已存在该账号，并将其置顶
             accounts.removeAll { $0.email == account.email }
-            accounts.append(account)
+            accounts.insert(account, at: 0)
             activeAccount = account
             
             saveAccounts()
@@ -101,8 +101,13 @@ class AccountManager {
     
     /// 切换活跃账号
     func switchAccount(to account: Account) {
-        activeAccount = account
-        logger.info("账号", "切换到账号: \(account.email)")
+        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+            let selected = accounts.remove(at: index)
+            accounts.insert(selected, at: 0)
+            activeAccount = selected
+            saveAccounts()
+            logger.info("账号", "切换到账号并置顶: \(account.email)")
+        }
     }
     
     /// 根据国家代码切换账号
