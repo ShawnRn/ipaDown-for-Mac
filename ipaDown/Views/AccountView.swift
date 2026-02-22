@@ -323,7 +323,7 @@ struct AccountView: View {
                 }
                 .disabled(accountManager.isLoggingIn || accountManager.loginEmail.isEmpty || accountManager.loginPassword.isEmpty)
             } footer: {
-                Text("Apple 账户可用于登录 Apple 的所有服务。")
+                Text("ipaDown 需要登录 Apple 账户以获取 ipa 包。")
             }
         }
         .navigationTitle("帐户")
@@ -354,27 +354,29 @@ struct AccountView: View {
     private var twoFactorSheet: some View {
         @Bindable var manager = accountManager
         
-        return VStack(spacing: 24) {
-            Image(systemName: "shield.checkered")
-                .font(.system(size: 60))
-                .foregroundStyle(.blue)
-                .symbolEffect(.bounce, value: accountManager.needsTwoFactorCode)
-            
-            VStack(spacing: 8) {
-                Text("双重验证")
-                    .font(.title2)
-                    .fontWeight(.bold)
+        return VStack(spacing: 32) { // 增加整体间距以自然撑开内容
+            VStack(spacing: 16) {
+                Image(systemName: "shield.checkered")
+                    .font(.system(size: 60))
+                    .foregroundStyle(.blue)
+                    .symbolEffect(.bounce, value: accountManager.needsTwoFactorCode)
                 
-                Text("请输入发送到你设备上的 6 位验证码")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 8) {
+                    Text("双重验证")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("请输入发送到你设备上的 6 位验证码")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .padding(.top, 24) // 将顶部元素整体向下推
             
             // Apple 风格 6 位验证码输入
             OTPInputView(code: $manager.twoFactorCode, onComplete: {
                 submitTwoFactor()
             })
-            .padding(.vertical, 10)
             
             if let error = accountManager.errorMessage {
                 Text(error)
@@ -399,6 +401,8 @@ struct AccountView: View {
                 .controlSize(.large)
                 .disabled(accountManager.twoFactorCode.count < 6 || accountManager.isLoggingIn)
             }
+            .padding(.top, 8) // 向上收紧按钮
+            .padding(.bottom, 16)
         }
         #if os(macOS)
         .padding(40)
@@ -431,45 +435,44 @@ struct OTPInputView: View {
     
     var body: some View {
         ZStack {
-            // 显示给用户看的 6 个盒子
-            HStack(spacing: 12) {
-                ForEach(0..<6, id: \.self) { index in
-                    box(at: index)
-                }
-            }
-            
-            // 隐藏的真实输入框覆盖在最上层，充当巨大点击热区
+            // 真实的隐形输入框用来承担原生键盘与事件
             TextField("", text: $code)
                 #if os(iOS)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 #endif
                 .focused($isFocused)
-                // 使其文字与光标完全透明
-                .foregroundStyle(.clear)
-                .tint(.clear)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // 使其完全透明且尺寸极小，避免任何视觉布局干扰
+                .opacity(0.01)
+                .frame(width: 1, height: 1)
+                // 彻底不拦截系统触摸
+                .allowsHitTesting(false)
                 .onChange(of: code) { _, newValue in
-                    // 只保留前 6 位数字
                     let filtered = String(newValue.filter { $0.isNumber }.prefix(6))
                     if filtered != newValue {
                         code = filtered
                     }
                     if filtered.count == 6 {
-                        // 延迟一丁点确保状态更新
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             onComplete()
                         }
                     }
                 }
+            
+            // 呈现用的视觉盒子
+            HStack(spacing: 12) {
+                ForEach(0..<6, id: \.self) { index in
+                    box(at: index)
+                }
+            }
+            .allowsHitTesting(false) // 重要：内部盒子不允许阻挡手势，透传给背后的 ZStack 热区
         }
-        .contentShape(Rectangle())
+        .contentShape(Rectangle()) // 使整个组合包变成绝对热区
         .onTapGesture {
-            // 强制重新激活焦点：解决 iPad 等设备上手动收起键盘后，isFocused 状态未重置
-            // 导致即使重新点击 TextField 也无法通知系统唤起键盘的 SwiftUI 漏洞
+            // “拍醒”系统的失真响应机制
             if isFocused {
                 isFocused = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     isFocused = true
                 }
             } else {
