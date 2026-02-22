@@ -45,6 +45,7 @@ struct AccountView: View {
                     Image(systemName: "plus")
                 }
             }
+        }
         .sheet(isPresented: $showingAddAccount) {
             #if os(macOS)
             macOSLoginSection
