@@ -14,7 +14,9 @@ enum PlatformImage {
         #if os(macOS)
         Image(nsImage: NSApplication.shared.applicationIconImage)
         #else
-        if let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+        if let uiImage = UIImage(named: "AppLogoHD") {
+            Image(uiImage: uiImage)
+        } else if let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
            let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
            let iconFiles = primary["CFBundleIconFiles"] as? [String],
            let iconName = iconFiles.last,
