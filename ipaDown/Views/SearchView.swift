@@ -26,24 +26,23 @@ struct SearchView: View {
             Divider()
             
             // 搜索结果
-            if searchManager.isSearching {
-                Spacer()
-                ProgressView("正在搜索...")
-                Spacer()
-            } else if let error = searchManager.errorMessage {
-                Spacer()
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.red)
-                Spacer()
-            } else if searchManager.results.isEmpty {
-                ContentUnavailableView(
-                    "搜索 App",
-                    systemImage: "magnifyingglass",
-                    description: Text("输入 App 名称、App Store 链接或 ID 进行搜索")
-                )
-            } else {
-                resultsList
+            VStack {
+                if searchManager.isSearching {
+                    ProgressView("正在搜索...")
+                } else if let error = searchManager.errorMessage {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                } else if searchManager.results.isEmpty {
+                    ContentUnavailableView(
+                        "搜索 App",
+                        systemImage: "magnifyingglass",
+                        description: Text("输入 App 名称、App Store 链接或 ID 进行搜索")
+                    )
+                } else {
+                    resultsList
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle("App 搜索")
         .onAppear { syncCountryWithAccount() }
