@@ -84,6 +84,7 @@
 			name = ipaDown;
 			packageProductDependencies = (
 				46B3D93B2F40BF44007F629B /* Sparkle */,
+				56B3D93B2F40BF440053FC2G /* ZIPFoundation */,
 			);
 			productName = ipaDown;
 			productReference = 464D9EBE2F40428F0053FC2F /* ipaDown.app */;
@@ -116,6 +117,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				46B3D93A2F40BF44007F629B /* XCRemoteSwiftPackageReference "Sparkle" */,
+				56B3D93A2F40BF440053FC2G /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 464D9EBF2F40428F0053FC2F /* Products */;
@@ -405,6 +407,14 @@
 				minimumVersion = 2.8.1;
 			};
 		};
+		56B3D93A2F40BF440053FC2G /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.11;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -412,6 +422,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 46B3D93A2F40BF44007F629B /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		56B3D93B2F40BF440053FC2G /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56B3D93A2F40BF440053FC2G /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

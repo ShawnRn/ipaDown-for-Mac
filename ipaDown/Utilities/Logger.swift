@@ -9,9 +9,9 @@ import Foundation
 import os
 
 /// 统一日志系统，同时支持 Console 和 UI 展示
-@Observable
+@Observable @MainActor
 class AppLogger {
-    static let shared = AppLogger()
+    nonisolated static let shared = AppLogger()
     
     private let osLog = os.Logger(subsystem: "com.shawnrain.ipaDown", category: "App")
     
@@ -55,7 +55,7 @@ class AppLogger {
     var entries: [LogEntry] = []
     
     /// 当前显示的最低日志级别
-    var minLevel: LogEntry.Level {
+    nonisolated var minLevel: LogEntry.Level {
         get {
             let val = UserDefaults.standard.integer(forKey: "minLogLevel")
             return LogEntry.Level(rawValue: val) ?? .info
@@ -65,9 +65,9 @@ class AppLogger {
         }
     }
     
-    private init() {}
+    nonisolated private init() {}
     
-    func log(_ level: LogEntry.Level, category: String, _ message: String) {
+    nonisolated func log(_ level: LogEntry.Level, category: String, _ message: String) {
         let entry = LogEntry(timestamp: Date(), level: level, message: message, category: category)
         
         // OS Log 始终记录
@@ -92,19 +92,19 @@ class AppLogger {
         }
     }
     
-    func info(_ category: String, _ message: String) {
+    nonisolated func info(_ category: String, _ message: String) {
         log(.info, category: category, message)
     }
     
-    func warning(_ category: String, _ message: String) {
+    nonisolated func warning(_ category: String, _ message: String) {
         log(.warning, category: category, message)
     }
     
-    func error(_ category: String, _ message: String) {
+    nonisolated func error(_ category: String, _ message: String) {
         log(.error, category: category, message)
     }
     
-    func success(_ category: String, _ message: String) {
+    nonisolated func success(_ category: String, _ message: String) {
         log(.success, category: category, message)
     }
     

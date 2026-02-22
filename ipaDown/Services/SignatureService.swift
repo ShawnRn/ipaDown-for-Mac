@@ -6,9 +6,10 @@
 //
 
 import Foundation
+import ZIPFoundation
 
 /// IPA 签名注入服务
-enum SignatureService {
+nonisolated enum SignatureService {
     private static let logger = AppLogger.shared
     
     /// 签名 IPA 文件（注入 sinf 签名数据）
@@ -17,119 +18,157 @@ enum SignatureService {
         sinfs: [SinfData],
         metadata: [String: Any]? = nil
     ) async throws {
-        #if os(macOS)
-        // macOS: 使用 Process 调用 unzip/zip 进行签名注入
+        // 捕获一个在 background context 下可调用的引用
+        let logger = self.logger
+        
         try await Task.detached(priority: .userInitiated) {
-            await logger.info("签名", "开始签名: \(ipaPath.lastPathComponent)")
+            logger.info("签名", "开始注入签名: \(ipaPath.lastPathComponent)")
             
-            let tempDir = FileManager.default.temporaryDirectory
-                .appendingPathComponent("ipaDown_sign_\(UUID().uuidString)")
+            let archive = try Archive(url: ipaPath, accessMode: .update)
             
-            defer {
-                try? FileManager.default.removeItem(at: tempDir)
-            }
+            // 1. 获取 Bundle 名称
+            let bundleName = try readBundleName(from: archive)
             
-            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            
-            // 1. 解压 IPA
-            let unzipProcess = Process()
-            unzipProcess.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-            unzipProcess.arguments = ["-o", ipaPath.path, "-d", tempDir.path]
-            unzipProcess.standardOutput = nil
-            unzipProcess.standardError = nil
-            try unzipProcess.run()
-            unzipProcess.waitUntilExit()
-            
-            guard unzipProcess.terminationStatus == 0 else {
-                throw IPAError.signatureFailed("解压 IPA 失败")
-            }
-            
-            // 2. 找到 .app 目录
-            let payloadDir = tempDir.appendingPathComponent("Payload")
-            let contents = try FileManager.default.contentsOfDirectory(
-                at: payloadDir,
-                includingPropertiesForKeys: nil
-            )
-            guard let appDir = contents.first(where: { $0.pathExtension == "app" }) else {
-                throw IPAError.signatureFailed("未找到 .app 目录")
-            }
-            
-            _ = appDir.deletingPathExtension().lastPathComponent
-            
-            // 3. 注入 sinf 签名
-            let scInfoDir = appDir.appendingPathComponent("SC_Info")
-            try FileManager.default.createDirectory(at: scInfoDir, withIntermediateDirectories: true)
-            
-            let manifestPath = scInfoDir.appendingPathComponent("Manifest.plist")
-            if FileManager.default.fileExists(atPath: manifestPath.path) {
-                let manifestData = try Data(contentsOf: manifestPath)
-                if let manifest = try PropertyListSerialization.propertyList(from: manifestData, format: nil) as? [String: Any],
-                   let sinfPaths = manifest["SinfPaths"] as? [String] {
-                    for (index, sinfPath) in sinfPaths.enumerated() {
-                        guard index < sinfs.count else { continue }
-                        let fullPath = appDir.appendingPathComponent(sinfPath)
-                        try FileManager.default.createDirectory(
-                            at: fullPath.deletingLastPathComponent(),
-                            withIntermediateDirectories: true
-                        )
-                        try sinfs[index].data.write(to: fullPath)
-                    }
-                }
+            // 2. 注入 Sinf 签名
+            if let manifest = try readManifestPlist(from: archive) {
+                try injectFromManifest(manifest, into: archive, sinfs: sinfs, bundleName: bundleName)
+            } else if let info = try readInfoPlist(from: archive) {
+                try injectFromInfo(info, into: archive, sinfs: sinfs, bundleName: bundleName)
             } else {
-                let infoPlistPath = appDir.appendingPathComponent("Info.plist")
-                if FileManager.default.fileExists(atPath: infoPlistPath.path) {
-                    let infoData = try Data(contentsOf: infoPlistPath)
-                    if let info = try PropertyListSerialization.propertyList(from: infoData, format: nil) as? [String: Any],
-                       let bundleExecutable = info["CFBundleExecutable"] as? String,
-                       let sinf = sinfs.first {
-                        let sinfPath = scInfoDir.appendingPathComponent("\(bundleExecutable).sinf")
-                        try sinf.data.write(to: sinfPath)
-                    }
+                logger.warning("签名", "未能在包内找到 Manifest.plist 或 Info.plist，尝试默认路径注入")
+                try injectToDefaultPath(into: archive, sinfs: sinfs, bundleName: bundleName)
+            }
+            
+            // 3. 注入 iTunesMetadata.plist
+            if let metadata = metadata {
+                try injectMetadata(metadata, into: archive)
+            }
+            
+            logger.success("签名", "签名数据注入完成: \(ipaPath.lastPathComponent)")
+        }.value
+    }
+    
+    // MARK: - 私有辅助方法
+    
+    private static func readBundleName(from archive: Archive) throws -> String {
+        for entry in archive {
+            if entry.path.contains(".app/Info.plist"), !entry.path.contains("/Watch/") {
+                let components = entry.path.split(separator: "/")
+                if let appFolder = components.first(where: { $0.hasSuffix(".app") }) {
+                    return String(appFolder.replacingOccurrences(of: ".app", with: ""))
                 }
             }
-            
-            // 4. 写入 iTunesMetadata.plist（如果有）
-            if let metadata = metadata {
-                let metadataPath = tempDir.appendingPathComponent("Payload")
-                    .deletingLastPathComponent()
-                    .appendingPathComponent("iTunesMetadata.plist")
-                let metadataData = try PropertyListSerialization.data(
-                    fromPropertyList: metadata,
-                    format: .xml,
-                    options: 0
-                )
-                try metadataData.write(to: metadataPath)
-            }
-            
-            // 5. 重新压缩为 IPA
-            let signedPath = ipaPath.deletingLastPathComponent()
-                .appendingPathComponent("signed_\(ipaPath.lastPathComponent)")
-            
-            let zipProcess = Process()
-            zipProcess.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
-            zipProcess.arguments = ["-r", signedPath.path, "Payload"]
-            if metadata != nil {
-                zipProcess.arguments?.append("iTunesMetadata.plist")
-            }
-            zipProcess.currentDirectoryURL = tempDir
-            zipProcess.standardOutput = nil
-            zipProcess.standardError = nil
-            try zipProcess.run()
-            zipProcess.waitUntilExit()
-            
-            guard zipProcess.terminationStatus == 0 else {
-                throw IPAError.signatureFailed("重新压缩 IPA 失败")
-            }
-            
-            // 6. 替换原文件
-            try FileManager.default.removeItem(at: ipaPath)
-            try FileManager.default.moveItem(at: signedPath, to: ipaPath)
-            
-            await logger.success("签名", "签名完成: \(ipaPath.lastPathComponent)")
-        }.value
-        #else
-        // iOS: 不支持 Process，跳过签名步骤
-        logger.warning("签名", "iOS 平台不支持 IPA 签名注入，已跳过: \(ipaPath.lastPathComponent)")
-        #endif
+        }
+        throw IPAError.signatureFailed("未能在 IPA 中定位到有效的 .app 目录")
     }
+    
+    private static func readManifestPlist(from archive: Archive) throws -> PackageManifest? {
+        for entry in archive {
+            if entry.path.hasSuffix(".app/SC_Info/Manifest.plist") {
+                var data = Data()
+                _ = try archive.extract(entry, consumer: { data.append($0) })
+                return try PropertyListDecoder().decode(PackageManifest.self, from: data)
+            }
+        }
+        return nil
+    }
+    
+    private static func readInfoPlist(from archive: Archive) throws -> PackageInfo? {
+        for entry in archive {
+            if entry.path.hasSuffix(".app/Info.plist"), !entry.path.contains("/Watch/") {
+                var data = Data()
+                _ = try archive.extract(entry, consumer: { data.append($0) })
+                // 允许失败，因为有些 Info.plist 可能是二进制格式导致 Decodable 失败
+                if let dict = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+                   let executable = dict["CFBundleExecutable"] as? String {
+                    return PackageInfo(bundleExecutable: executable)
+                }
+            }
+        }
+        return nil
+    }
+    
+    private static func injectFromManifest(
+        _ manifest: PackageManifest,
+        into archive: Archive,
+        sinfs: [SinfData],
+        bundleName: String
+    ) throws {
+        for (index, sinfPath) in manifest.sinfPaths.enumerated() {
+            guard index < sinfs.count else { break }
+            let sinf = sinfs[index]
+            let fullPath = "Payload/\(bundleName).app/\(sinfPath)"
+            
+            if archive[fullPath] != nil {
+                try archive.remove(archive[fullPath]!)
+            }
+            
+            try archive.addEntry(with: fullPath, type: .file, uncompressedSize: Int64(sinf.data.count), provider: { (position: Int64, size: Int) -> Data in
+                return sinf.data.subdata(in: Int(position)..<Int(position) + size)
+            })
+        }
+    }
+    
+    private static func injectFromInfo(
+        _ info: PackageInfo,
+        into archive: Archive,
+        sinfs: [SinfData],
+        bundleName: String
+    ) throws {
+        guard let sinf = sinfs.first else { return }
+        let sinfPath = "Payload/\(bundleName).app/SC_Info/\(info.bundleExecutable).sinf"
+        
+        if archive[sinfPath] != nil {
+            try archive.remove(archive[sinfPath]!)
+        }
+        
+        try archive.addEntry(with: sinfPath, type: .file, uncompressedSize: Int64(sinf.data.count), provider: { (position: Int64, size: Int) -> Data in
+            return sinf.data.subdata(in: Int(position)..<Int(position) + size)
+        })
+    }
+    
+    private static func injectToDefaultPath(
+        into archive: Archive,
+        sinfs: [SinfData],
+        bundleName: String
+    ) throws {
+        guard let sinf = sinfs.first else { return }
+        // 尝试推测路径，通常为 SC_Info 目录下同名文件
+        let sinfPath = "Payload/\(bundleName).app/SC_Info/\(bundleName).sinf"
+        
+        if archive[sinfPath] != nil {
+            try archive.remove(archive[sinfPath]!)
+        }
+        
+        try archive.addEntry(with: sinfPath, type: .file, uncompressedSize: Int64(sinf.data.count), provider: { (position: Int64, size: Int) -> Data in
+            return sinf.data.subdata(in: Int(position)..<Int(position) + size)
+        })
+    }
+    
+    private static func injectMetadata(_ metadata: [String: Any], into archive: Archive) throws {
+        let metadataPath = "iTunesMetadata.plist"
+        let data = try PropertyListSerialization.data(fromPropertyList: metadata, format: .xml, options: 0)
+        
+        if archive[metadataPath] != nil {
+            try archive.remove(archive[metadataPath]!)
+        }
+        
+        try archive.addEntry(with: metadataPath, type: .file, uncompressedSize: Int64(data.count), provider: { (position: Int64, size: Int) -> Data in
+            return data.subdata(in: Int(position)..<Int(position) + size)
+        })
+    }
+}
+
+// MARK: - 模型定义
+
+private struct PackageManifest: Decodable, Sendable {
+    let sinfPaths: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case sinfPaths = "SinfPaths"
+    }
+}
+
+private struct PackageInfo: Sendable {
+    let bundleExecutable: String
 }
