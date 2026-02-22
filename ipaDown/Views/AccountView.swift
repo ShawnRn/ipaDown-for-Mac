@@ -463,6 +463,19 @@ struct OTPInputView: View {
                     }
                 }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // 强制重新激活焦点：解决 iPad 等设备上手动收起键盘后，isFocused 状态未重置
+            // 导致即使重新点击 TextField 也无法通知系统唤起键盘的 SwiftUI 漏洞
+            if isFocused {
+                isFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    isFocused = true
+                }
+            } else {
+                isFocused = true
+            }
+        }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isFocused = true
