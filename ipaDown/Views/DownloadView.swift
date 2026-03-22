@@ -81,16 +81,11 @@ struct DownloadView: View {
                     }
                 }
             }
+            #if os(iOS)
             .sheet(item: $shareURL) { item in
-                #if os(iOS)
                 ActivityView(activityItems: [item.url])
-                #elseif os(macOS)
-                MacShareView(activityItems: [item.url])
-                    .frame(width: 300, height: 200)
-                #else
-                EmptyView()
-                #endif
             }
+            #endif
         }
     }
     
@@ -131,12 +126,16 @@ struct DownloadView: View {
 }
 
 struct DownloadTaskRow: View {
+    @Environment(DownloadManager.self) private var downloadManager
+    
     let task: IPADownloadTask
     let onTogglePause: () -> Void
     let onRemove: () -> Void
     let onShare: () -> Void
     
-    @State private var isHovering = false
+    #if os(macOS)
+    @State private var localShareURL: URL?
+    #endif
     
     var body: some View {
         HStack(spacing: 12) {
@@ -198,22 +197,27 @@ struct DownloadTaskRow: View {
                     Button(task.status.isActive ? "暂停" : "继续") { onTogglePause() }
                         .buttonStyle(.bordered)
                 } else {
-                    Button {
-                        onShare()
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    .buttonStyle(.plain)
-                    .padding(4)
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.body)
+                        .padding(4)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            let fileURL = downloadManager.downloadDirectory.appendingPathComponent(task.fileName)
+                            if FileManager.default.fileExists(atPath: fileURL.path) {
+                                localShareURL = fileURL
+                            }
+                        }
+                        .background {
+                            MacShareView(shareURL: $localShareURL)
+                        }
                 }
                 
-                Button(role: .destructive) { onRemove() } label: {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.plain)
-                .padding(4)
+                Image(systemName: "trash")
+                    .font(.body)
+                    .padding(4)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onRemove() }
             }
-            .opacity(isHovering ? 1 : 0)
             #else
             HStack(spacing: 8) {
                 Menu {
@@ -264,11 +268,6 @@ struct DownloadTaskRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.platformControlBackground.opacity(0.4))
         }
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovering = hovering
-            }
-        }
         #else
         .contextMenu {
             Button(role: .destructive) {
@@ -287,37 +286,22 @@ struct DownloadTaskRow: View {
 import AppKit
 
 struct MacShareView: NSViewRepresentable {
-    let activityItems: [Any]
+    @Binding var shareURL: URL?
     
     func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        
-        DispatchQueue.main.async {
-            let picker = NSSharingServicePicker(items: activityItems)
-            picker.delegate = context.coordinator
-            // 在视图中间弹出
-            picker.show(relativeTo: view.bounds, of: view, preferredEdge: .minY)
-        }
-        
-        return view
+        return NSView()
     }
     
-    func updateNSView(_ nsView: NSView, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, NSSharingServicePickerDelegate {
-        var parent: MacShareView
-        
-        init(_ parent: MacShareView) {
-            self.parent = parent
-        }
-        
-        func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, delegateFor sharingService: NSSharingService) -> NSSharingServiceDelegate? {
-            return nil
+    func updateNSView(_ nsView: NSView, context: Context) {
+        if let url = shareURL {
+            DispatchQueue.main.async {
+                self.shareURL = nil // 消费掉状态，避免重复触发
+                let picker = NSSharingServicePicker(items: [url])
+                picker.show(relativeTo: nsView.bounds, of: nsView, preferredEdge: .minY)
+            }
         }
     }
 }
 #endif
+
+
