@@ -18,58 +18,76 @@ echo "=========================================="
 echo "     ipaDown macOS 自动打包脚本 (.dmg)     "
 echo "=========================================="
 
-# 2. 编译 macOS 版本
+# 2 & 3. 编译与提取 macOS 版本 (双架构分离)
 echo ">>> 开始编译 macOS 版本..."
 cd "$PROJECT_DIR"
-xcodebuild clean archive \
-    -workspace "$WORKSPACE" \
-    -scheme "$SCHEME" \
-    -destination 'generic/platform=macOS' \
-    -archivePath "$MAC_ARCHIVE" \
-    | xcpretty || xcodebuild clean archive \
-    -workspace "$WORKSPACE" \
-    -scheme "$SCHEME" \
-    -destination 'generic/platform=macOS' \
-    -archivePath "$MAC_ARCHIVE"
-
-if [ ! -d "$MAC_ARCHIVE" ]; then
-    echo "❌ macOS 构建失败！"
-    exit 1
-fi
-
-echo "✅ macOS Archive 构建成功！"
-
-# 3. 提取 macOS .app 构建产物
-echo ">>> 提取 macOS .app..."
-MAC_APP_PATH="$MAC_ARCHIVE/Products/Applications/ipaDown.app"
-if [ -d "$MAC_APP_PATH" ]; then
-    cp -R "$MAC_APP_PATH" "$BUILD_DIR/"
-    cd "$BUILD_DIR"
-    APP_VERSION=$(defaults read "$(pwd)/ipaDown.app/Contents/Info.plist" CFBundleShortVersionString)
-
-    # 尝试使用 create-dmg
-    if command -v create-dmg &> /dev/null; then
-        echo ">>> 使用 create-dmg 创建 DMG..."
-        rm -f "ipaDown_${APP_VERSION}.dmg"
-        create-dmg "ipaDown.app" "$BUILD_DIR"
+for TARGET_ARCH in "arm64" "x86_64"; do
+    echo "=================================================="
+    echo ">>> 正在编译 macOS 架构: ${TARGET_ARCH} ..."
+    echo "=================================================="
+    
+    CURRENT_MAC_ARCHIVE="$BUILD_DIR/Mac_${TARGET_ARCH}.xcarchive"
+    
+    xcodebuild clean archive \
+        -workspace "$WORKSPACE" \
+        -scheme "$SCHEME" \
+        -destination "generic/platform=macOS,arch=${TARGET_ARCH}" \
+        -archivePath "$CURRENT_MAC_ARCHIVE" \
+        ARCHS="${TARGET_ARCH}" \
+        | xcpretty || xcodebuild clean archive \
+        -workspace "$WORKSPACE" \
+        -scheme "$SCHEME" \
+        -destination "generic/platform=macOS,arch=${TARGET_ARCH}" \
+        -archivePath "$CURRENT_MAC_ARCHIVE" \
+        ARCHS="${TARGET_ARCH}"
         
-        if [ -f "ipaDown $APP_VERSION.dmg" ]; then
-            mv "ipaDown $APP_VERSION.dmg" "ipaDown_${APP_VERSION}.dmg"
-        elif [ -f "ipaDown.dmg" ]; then
-            mv "ipaDown.dmg" "ipaDown_${APP_VERSION}.dmg"
+    if [ ! -d "$CURRENT_MAC_ARCHIVE" ]; then
+        echo "❌ macOS (${TARGET_ARCH}) 构建失败！"
+        exit 1
+    fi
+    echo "✅ macOS Archive (${TARGET_ARCH}) 构建成功！"
+    
+    # 3. 提取 macOS .app 构建产物
+    echo ">>> 提取 macOS .app (${TARGET_ARCH})..."
+    MAC_APP_PATH="$CURRENT_MAC_ARCHIVE/Products/Applications/ipaDown.app"
+    if [ -d "$MAC_APP_PATH" ]; then
+        cd "$BUILD_DIR"
+        TEMP_APP_DIR="ipaDown_${TARGET_ARCH}_temp"
+        mkdir -p "$TEMP_APP_DIR"
+        cp -R "$MAC_APP_PATH" "$TEMP_APP_DIR/ipaDown.app"
+        
+        APP_VERSION=$(defaults read "$(pwd)/$TEMP_APP_DIR/ipaDown.app/Contents/Info.plist" CFBundleShortVersionString)
+        
+        # 尝试使用 create-dmg
+        if command -v create-dmg &> /dev/null; then
+            echo ">>> 使用 create-dmg 创建 DMG (${TARGET_ARCH})..."
+            DMG_OUT_NAME="ipaDown_${APP_VERSION}_${TARGET_ARCH}.dmg"
+            rm -f "$DMG_OUT_NAME"
+            create-dmg "$TEMP_APP_DIR/ipaDown.app" "$BUILD_DIR" || true
+            
+            if [ -f "ipaDown $APP_VERSION.dmg" ]; then
+                mv "ipaDown $APP_VERSION.dmg" "$DMG_OUT_NAME"
+            elif [ -f "ipaDown.dmg" ]; then
+                mv "ipaDown.dmg" "$DMG_OUT_NAME"
+            else
+                mv ipaDown*.dmg "$DMG_OUT_NAME" 2>/dev/null || true
+            fi
+            
+            echo "✅ macOS 应用 DMG 制作完成: $BUILD_DIR/$DMG_OUT_NAME"
         else
-            mv ipaDown*.dmg "ipaDown_${APP_VERSION}.dmg" 2>/dev/null || true
+            echo "⚠️ 未找到 create-dmg CLI，降级使用 zip 压缩..."
+            cd "$TEMP_APP_DIR"
+            zip -r "../ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip" "ipaDown.app" >/dev/null
+            cd ..
+            echo "✅ macOS 应用提取完成: $BUILD_DIR/ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip"
         fi
         
-        echo "✅ macOS 应用 DMG 制作完成: $BUILD_DIR/ipaDown_${APP_VERSION}.dmg"
+        rm -rf "$TEMP_APP_DIR"
+        cd "$PROJECT_DIR"
     else
-        echo "⚠️ 未找到 create-dmg CLI，降级使用 zip 压缩..."
-        zip -r "ipaDown_${APP_VERSION}_Mac.zip" "ipaDown.app" >/dev/null
-        echo "✅ macOS 应用提取完成: $BUILD_DIR/ipaDown_${APP_VERSION}_Mac.zip"
+        echo "❌ 找不到 macOS 应用: $MAC_APP_PATH"
     fi
-else
-    echo "❌ 找不到 macOS 应用: $MAC_APP_PATH"
-fi
+done
 
 echo "=========================================="
 echo "🎉 macOS 打包流程结束！"

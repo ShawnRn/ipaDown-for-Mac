@@ -172,17 +172,26 @@ class DownloadManager {
     func startDownload(task: IPADownloadTask, account: Account) async {
         var mutableAccount = account
         var retryCount = 0
+        var hasTriedPurchase = false
         
-        while retryCount < 2 {
+        while retryCount < 3 {
             do {
-                // 1. 尝试自动购买（获取许可）
-                task.status = .purchasing
-                
-                do {
-                    try await PurchaseService.purchase(account: &mutableAccount, appId: task.appId, versionId: task.versionId)
-                } catch IPAError.purchaseFailed(_) {
-                    // 已购买的应用会报错，忽略
-                    logger.info("下载", "许可检查完成")
+                // 1. 尝试自动购买（获取许可）—— 使用 versionId "0" 确保获取通用许可
+                if !hasTriedPurchase {
+                    task.status = .purchasing
+                    
+                    do {
+                        try await PurchaseService.purchase(
+                            account: &mutableAccount,
+                            appId: task.appId,
+                            versionId: "0"
+                        )
+                        logger.success("下载", "许可获取/确认成功")
+                    } catch IPAError.purchaseFailed(let msg) {
+                        // 购买失败不一定致命 — 用户可能已通过其他途径持有许可
+                        logger.warning("下载", "购买请求未成功: \(msg)，继续尝试下载...")
+                    }
+                    hasTriedPurchase = true
                 }
                 
                 // 2. 获取下载信息
@@ -221,12 +230,60 @@ class DownloadManager {
                 try await performDownloadAndPostProcess(task: task, info: finalInfo)
                 return
                 
+            } catch IPAError.licenseRequired {
+                retryCount += 1
+                
+                if retryCount <= 2 {
+                    // 许可不存在 — 尝试自动购买后重试
+                    logger.warning("下载", "未找到许可，正在尝试自动购买 (第 \(retryCount) 次)...")
+                    task.status = .purchasing
+                    
+                    do {
+                        try await PurchaseService.purchase(
+                            account: &mutableAccount,
+                            appId: task.appId,
+                            versionId: "0"
+                        )
+                        logger.success("下载", "自动购买成功，准备重试下载")
+                        hasTriedPurchase = true
+                        continue // 购买成功，重试下载
+                    } catch IPAError.tokenExpired {
+                        // 购买时发现 Token 过期，先刷新
+                        if let am = accountManager,
+                           let refreshed = await am.refreshToken(for: mutableAccount) {
+                            mutableAccount = refreshed
+                            logger.info("下载", "Token 已刷新，重试购买和下载")
+                            hasTriedPurchase = false // 重置购买标记
+                            continue
+                        }
+                        task.status = .failed
+                        task.error = "密码 Token 已过期，自动刷新失败，请在账号管理页重新登录。"
+                        logger.error("下载", "购买时 Token 过期且刷新失败")
+                        saveTasks()
+                        return
+                    } catch {
+                        // 购买确实失败 — 可能是付费应用
+                        task.status = .failed
+                        task.error = "无法获取应用许可: \(error.localizedDescription)。如果是付费应用，请先在 App Store 中购买。"
+                        logger.error("下载", "自动购买失败: \(error.localizedDescription)")
+                        saveTasks()
+                        return
+                    }
+                } else {
+                    task.status = .failed
+                    task.error = "未找到应用许可。如果是付费应用，请先在 App Store 中购买。"
+                    logger.error("下载", "许可获取失败，已达最大重试次数")
+                    saveTasks()
+                    return
+                }
+                
             } catch IPAError.tokenExpired {
                 retryCount += 1
-                if retryCount < 2, let am = accountManager {
+                if retryCount <= 2, let am = accountManager {
                     logger.warning("下载", "Token 已过期，正在尝试自动刷新 (\(mutableAccount.email))...")
                     if let refreshed = await am.refreshToken(for: mutableAccount) {
                         mutableAccount = refreshed
+                        hasTriedPurchase = false // Token 刷新后重新购买
                         continue // 刷新成功，重试
                     }
                 }
@@ -234,11 +291,20 @@ class DownloadManager {
                 task.status = .failed
                 task.error = "密码 Token 已过期，自动刷新失败，请在账号管理页重新登录。"
                 logger.error("下载", "自动刷新 Token 失败")
+                saveTasks()
+                return
+            } catch is CancellationError {
+                // 任务被用户暂停导致的取消，不覆盖暂停状态
+                if task.status != .paused {
+                    task.status = .paused
+                    task.speed = "已暂停"
+                }
+                logger.info("下载", "任务已取消: \(task.appName)")
                 return
             } catch {
                 let errorMsg = error.localizedDescription
                 
-                // 特殊处理 "unknown error"：如果是系统/苹果接口抽风导致，我们在第一遍重试失败后，仍然允许再进行一次透明的补充重试
+                // 特殊处理 "unknown error"：系统/苹果接口抽风时进行透明重试
                 let isUnknown = errorMsg.lowercased().contains("unknown error")
                 
                 if isUnknown && retryCount < 2 {
@@ -251,6 +317,7 @@ class DownloadManager {
                 task.status = .failed
                 task.error = errorMsg
                 logger.error("下载", "下载失败: \(errorMsg)")
+                saveTasks()
                 return
             }
         }

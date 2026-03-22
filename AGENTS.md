@@ -225,9 +225,9 @@ ipaDown/
 
 ### 1. 双端自动化打包脚本 (`scripts/build_all.sh`)
 该脚本集成了完整的分发流程：
-- **macOS**: 执行 `xcodebuild archive` → 提取 `.app` → 使用 `create-dmg` 生成带安装界面的 `.dmg`。
+- **macOS (支持双架构)**: 执行 `xcodebuild archive` 双重遍历产生 `arm64` 与 `x86_64` 两个归档 → 提取 `.app` → 分别使用 `create-dmg` 生成独立的 `.dmg`（精简包体积）。
 - **iOS**: 执行 `xcodebuild archive` → 提取 `.app` → 打包为 `Payload` 格式的 `.ipa`（适配巨魔/侧载）。
-- **Sparkle**: 自动从生成的 `DMG` 提取 EdDSA 签名 → 计算流水 Build 号 → 更新 `appcast.xml`。
+- **Sparkle**: 自动从生成的双份 `DMG` 提取 EdDSA 签名组合两个 `<enclosure>` 节点 → 计算流水 Build 号 → 自动更新覆盖 `appcast.xml`。
 
 **使用方法**:
 ```bash
@@ -235,6 +235,22 @@ chmod +x ./scripts/build_all.sh
 ./scripts/build_all.sh
 ```
 产物将输出在 `build_output/` 目录下。
+
+### 1.5 命令行一键 GitHub 发布 (自动化拓展)
+完成脚本归档并在 `build_output` 中出现不同环境的 `.dmg` / `.ipa` 及覆写好的 `appcast.xml` 后：
+可以直接使用 `gh release create` 上传所有的多构架包，示例：
+```bash
+VERSION="<YOUR_VERSION>"
+# 上传 macOS 两个架构精简 DMG 以及 iOS 的 ipa
+gh release create "v$VERSION" "build_output/ipaDown_${VERSION}_arm64.dmg" "build_output/ipaDown_${VERSION}_x86_64.dmg" "build_output/ipaDown_${VERSION}_iOS.ipa" \
+  --title "ipaDown $VERSION 发布" \
+  --notes "在此输入您的更新日志..."
+  
+# 发布成功后推送 appcast.xml 生效 Sparkle
+git add appcast.xml
+git commit -m "chore: release v$VERSION update appcast"
+git push
+```
 
 ### 2. 手动构建
 - **Xcode**: 打开 `ipaDown-for-Apple.xcodeproj`。

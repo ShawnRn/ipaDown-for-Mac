@@ -63,13 +63,19 @@ enum DownloadService {
         
         // 检查失败
         if let failureType = dict["failureType"] as? String {
+            let customerMsg = dict["customerMessage"] as? String
             switch failureType {
             case "2034":
                 throw IPAError.tokenExpired
             case "1008":
                 throw IPAError.licenseRequired
             default:
-                let msg = dict["customerMessage"] as? String ?? "下载请求失败: \(failureType)"
+                let msg = customerMsg ?? "下载请求失败: \(failureType)"
+                // 如果 customerMessage 包含 license 相关关键词，统一视为许可缺失
+                if msg.localizedCaseInsensitiveContains("license")
+                    || msg.contains("许可") {
+                    throw IPAError.licenseRequired
+                }
                 throw IPAError.downloadFailed(msg)
             }
         }

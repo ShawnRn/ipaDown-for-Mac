@@ -20,6 +20,20 @@ struct ChangelogView: View {
     
     let changelogs: [ChangelogItem] = [
         ChangelogItem(
+            version: "1.4",
+            date: "2026-03-22",
+            changes: [
+                "修复下载时「License not found」错误，支持自动获取未 Get 的免费应用。",
+                "修复暂停下载被误标为失败的问题。",
+                "重构账号管理持久化，迁移至私有 JSON 文件存储，卸载后零残留。",
+                "重新设计账号页面，统一卡片布局，模态登录表单适配 macOS 与 iOS。",
+                "签名服务跨平台适配，使用 ZIPFoundation 重写签名注入。",
+                "新增 iOS/iPadOS 全面适配，两步验证、下载管理等 UI 深度优化。",
+                "大量 UI 细节优化，全局 AccentColor、空状态标准化等。",
+                "修复多个稳定性问题，包括 macOS 崩溃和 iOS 分享面板异常。",
+            ]
+        ),
+        ChangelogItem(
             version: "1.3",
             date: "2026-02-22",
             changes: [
