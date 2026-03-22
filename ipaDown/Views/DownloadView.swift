@@ -84,6 +84,9 @@ struct DownloadView: View {
             .sheet(item: $shareURL) { item in
                 #if os(iOS)
                 ActivityView(activityItems: [item.url])
+                #elseif os(macOS)
+                MacShareView(activityItems: [item.url])
+                    .frame(width: 300, height: 200)
                 #else
                 EmptyView()
                 #endif
@@ -194,6 +197,14 @@ struct DownloadTaskRow: View {
                 if task.status != .completed {
                     Button(task.status.isActive ? "暂停" : "继续") { onTogglePause() }
                         .buttonStyle(.bordered)
+                } else {
+                    Button {
+                        onShare()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.plain)
+                    .padding(4)
                 }
                 
                 Button(role: .destructive) { onRemove() } label: {
@@ -269,3 +280,44 @@ struct DownloadTaskRow: View {
         #endif
     }
 }
+
+
+// MARK: - Mac Share View
+#if os(macOS)
+import AppKit
+
+struct MacShareView: NSViewRepresentable {
+    let activityItems: [Any]
+    
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        
+        DispatchQueue.main.async {
+            let picker = NSSharingServicePicker(items: activityItems)
+            picker.delegate = context.coordinator
+            // 在视图中间弹出
+            picker.show(relativeTo: view.bounds, of: view, preferredEdge: .minY)
+        }
+        
+        return view
+    }
+    
+    func updateNSView(_ nsView: NSView, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, NSSharingServicePickerDelegate {
+        var parent: MacShareView
+        
+        init(_ parent: MacShareView) {
+            self.parent = parent
+        }
+        
+        func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, delegateFor sharingService: NSSharingService) -> NSSharingServiceDelegate? {
+            return nil
+        }
+    }
+}
+#endif
