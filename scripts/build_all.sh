@@ -196,8 +196,8 @@ if [ -f "$DMG_ARM64" ] && [ -f "$DMG_X86_64" ]; then
             <sparkle:version>$SPARKLE_VERSION</sparkle:version>
             <sparkle:shortVersionString>$APP_VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="$URL_ARM64" length="$SIZE_ARM64" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" $SIG_ARM64/>
-            <enclosure url="$URL_X86_64" length="$SIZE_X86_64" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" $SIG_X86_64/>
+            <enclosure url="$URL_ARM64" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" $SIG_ARM64/>
+            <enclosure url="$URL_X86_64" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" $SIG_X86_64/>
         </item>
     </channel>
 </rss>

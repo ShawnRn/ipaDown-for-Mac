@@ -8,8 +8,8 @@
             <sparkle:version>2026032201</sparkle:version>
             <sparkle:shortVersionString>1.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.4/ipaDown_1.4_arm64.dmg" length="5461604" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="lRJayB4Erm+ZspHVZ0WUJ2se2J6RUwFNZlQevtMGmgfzhP5T9+Fm1VrPs6hWkwNyEb2/U/OxYRzlhtfLA9oiAA==" length="5461604"/>
-            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.4/ipaDown_1.4_x86_64.dmg" length="5524343" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" sparkle:edSignature="+tZKdS8bcdj0qQtLRVCrL1nw+vthTu+kr/+LHYJKLLTSyGNmEUkzcWb6Xn0rSxCZOKoMSb8aqxYLThRKo424Dg==" length="5524343"/>
+            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.4/ipaDown_1.4_arm64.dmg" length="5461604" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="lRJayB4Erm+ZspHVZ0WUJ2se2J6RUwFNZlQevtMGmgfzhP5T9+Fm1VrPs6hWkwNyEb2/U/OxYRzlhtfLA9oiAA=="/>
+            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.4/ipaDown_1.4_x86_64.dmg" length="5524343" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" sparkle:edSignature="+tZKdS8bcdj0qQtLRVCrL1nw+vthTu+kr/+LHYJKLLTSyGNmEUkzcWb6Xn0rSxCZOKoMSb8aqxYLThRKo424Dg=="/>
         </item>
     </channel>
 </rss>
