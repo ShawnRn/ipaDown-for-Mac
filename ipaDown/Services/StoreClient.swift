@@ -63,7 +63,10 @@ enum StoreClient {
         
         // 允许 302 重定向（由 AuthService 处理），但对于 >400 的错误需抛出异常
         if httpResponse.statusCode >= 400 {
-            let bodyPreview = String(data: data.prefix(200), encoding: .utf8) ?? "（二进制数据）"
+            var bodyPreview = String(data: data.prefix(200), encoding: .utf8) ?? "（二进制数据）"
+            if bodyPreview.contains("<html") || bodyPreview.contains("<head") {
+                bodyPreview = "Apple 服务器响应异常 (HTTP \(httpResponse.statusCode))"
+            }
             throw IPAError.networkError("HTTP \(httpResponse.statusCode) — \(bodyPreview)")
         }
         

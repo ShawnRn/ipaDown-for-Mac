@@ -64,12 +64,14 @@ for TARGET_ARCH in "arm64" "x86_64"; do
         -destination "generic/platform=macOS" \
         -archivePath "$CURRENT_MAC_ARCHIVE" \
         ARCHS="${TARGET_ARCH}" \
+        CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO \
         | xcpretty || xcodebuild clean archive \
         -workspace "$WORKSPACE" \
         -scheme "$SCHEME" \
         -destination "generic/platform=macOS" \
         -archivePath "$CURRENT_MAC_ARCHIVE" \
-        ARCHS="${TARGET_ARCH}"
+        ARCHS="${TARGET_ARCH}" \
+        CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO
         
     if [ ! -d "$CURRENT_MAC_ARCHIVE" ]; then
         echo "❌ macOS (${TARGET_ARCH}) 构建失败！"
@@ -93,16 +95,7 @@ for TARGET_ARCH in "arm64" "x86_64"; do
             echo ">>> 使用 create-dmg 创建 DMG (${TARGET_ARCH})..."
             DMG_OUT_NAME="ipaDown_${APP_VERSION}_${TARGET_ARCH}.dmg"
             rm -f "$DMG_OUT_NAME"
-            create-dmg "$TEMP_APP_DIR/ipaDown.app" "$BUILD_DIR" || true
-            
-            if [ -f "ipaDown $APP_VERSION.dmg" ]; then
-                mv "ipaDown $APP_VERSION.dmg" "$DMG_OUT_NAME"
-            elif [ -f "ipaDown.dmg" ]; then
-                mv "ipaDown.dmg" "$DMG_OUT_NAME"
-            else
-                mv ipaDown*.dmg "$DMG_OUT_NAME" 2>/dev/null || true
-            fi
-            
+            create-dmg --volname "ipaDown" --app-drop-link 420 200 "$BUILD_DIR/$DMG_OUT_NAME" "$TEMP_APP_DIR" || true
             echo "✅ macOS 应用 DMG 制作完成: $BUILD_DIR/$DMG_OUT_NAME"
         else
             echo "⚠️ 未找到 create-dmg CLI，降级使用 zip 压缩..."
@@ -118,8 +111,6 @@ for TARGET_ARCH in "arm64" "x86_64"; do
     fi
 done
 
-
-
 # 4. 编译 iOS 版本
 echo ">>> 开始编译 iOS 版本..."
 cd "$PROJECT_DIR"
@@ -128,18 +119,19 @@ xcodebuild clean archive \
     -scheme "$SCHEME" \
     -destination 'generic/platform=iOS' \
     -archivePath "$IOS_ARCHIVE" \
+    CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO \
     | xcpretty || xcodebuild clean archive \
     -workspace "$WORKSPACE" \
     -scheme "$SCHEME" \
     -destination 'generic/platform=iOS' \
-    -archivePath "$IOS_ARCHIVE"
+    -archivePath "$IOS_ARCHIVE" \
+    CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO || true
 
 if [ ! -d "$IOS_ARCHIVE" ]; then
-    echo "❌ iOS 构建失败！"
-    exit 1
+    echo "⚠️ iOS Archive 构建未就绪（如缺少 iOS SDK），跳过 iOS .ipa 打包"
+else
+    echo "✅ iOS Archive 构建成功！"
 fi
-
-echo "✅ iOS Archive 构建成功！"
 
 # 5. 提取 iOS .ipa 构建产物
 echo ">>> 提取 iOS .app 并打包为 .ipa..."

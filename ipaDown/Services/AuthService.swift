@@ -166,8 +166,8 @@ enum AuthService {
     private static func makeAuthURL(guid: String) -> URL {
         var components = URLComponents()
         components.scheme = "https"
-        components.host = "auth.itunes.apple.com"
-        components.path = "/auth/v1/native/fast"
+        components.host = "buy.itunes.apple.com"
+        components.path = "/WebObjects/MZFinance.woa/wa/authenticate"
         components.queryItems = [URLQueryItem(name: "guid", value: guid)]
         return components.url!
     }
