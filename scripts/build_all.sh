@@ -51,7 +51,11 @@ fi
 
 # 2 & 3. 编译与提取 macOS 版本 (双架构分离)
 echo ">>> 开始编译 macOS 版本..."
-for TARGET_ARCH in "arm64" "x86_64"; do
+
+# 清理旧的归档文件，确保能够重新编译
+rm -rf "$BUILD_DIR/Mac_arm64.xcarchive"
+
+for TARGET_ARCH in "arm64"; do
     echo "=================================================="
     echo ">>> 正在编译 macOS 架构: ${TARGET_ARCH} ..."
     echo "=================================================="
@@ -64,14 +68,12 @@ for TARGET_ARCH in "arm64" "x86_64"; do
         -destination "generic/platform=macOS" \
         -archivePath "$CURRENT_MAC_ARCHIVE" \
         ARCHS="${TARGET_ARCH}" \
-        CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO \
         | xcpretty || xcodebuild clean archive \
         -workspace "$WORKSPACE" \
         -scheme "$SCHEME" \
         -destination "generic/platform=macOS" \
         -archivePath "$CURRENT_MAC_ARCHIVE" \
-        ARCHS="${TARGET_ARCH}" \
-        CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO
+        ARCHS="${TARGET_ARCH}"
         
     if [ ! -d "$CURRENT_MAC_ARCHIVE" ]; then
         echo "❌ macOS (${TARGET_ARCH}) 构建失败！"
@@ -88,19 +90,40 @@ for TARGET_ARCH in "arm64" "x86_64"; do
         mkdir -p "$TEMP_APP_DIR"
         cp -R "$MAC_APP_PATH" "$TEMP_APP_DIR/ipaDown.app"
         
+        # 4. 对 macOS 应用进行 Ad-hoc 重新签名，启用 Hardened Runtime 并注入 entitlements
+        echo ">>> 对 macOS 应用进行 Ad-hoc 重新签名 (${TARGET_ARCH})..."
+        codesign --force --deep --sign - --options runtime --entitlements "$PROJECT_DIR/ipaDown/ipaDown.entitlements" "$TEMP_APP_DIR/ipaDown.app"
+        
         APP_VERSION=$(defaults read "$(pwd)/$TEMP_APP_DIR/ipaDown.app/Contents/Info.plist" CFBundleShortVersionString)
         
         # 尝试使用 create-dmg
         if command -v create-dmg &> /dev/null; then
             echo ">>> 使用 create-dmg 创建 DMG (${TARGET_ARCH})..."
             DMG_OUT_NAME="ipaDown_${APP_VERSION}_${TARGET_ARCH}.dmg"
-            rm -f "$DMG_OUT_NAME"
-            create-dmg --volname "ipaDown" --app-drop-link 420 200 "$BUILD_DIR/$DMG_OUT_NAME" "$TEMP_APP_DIR" || true
-            echo "✅ macOS 应用 DMG 制作完成: $BUILD_DIR/$DMG_OUT_NAME"
+            rm -f "$DMG_OUT_NAME" "ipaDown $APP_VERSION.dmg" "ipaDown.dmg"
+            create-dmg "$TEMP_APP_DIR/ipaDown.app" "$BUILD_DIR" || true
+            
+            # 检查 DMG 是否真的生成了
+            if [ -f "ipaDown $APP_VERSION.dmg" ] || [ -f "ipaDown.dmg" ]; then
+                if [ -f "ipaDown $APP_VERSION.dmg" ]; then
+                    mv "ipaDown $APP_VERSION.dmg" "$DMG_OUT_NAME"
+                elif [ -f "ipaDown.dmg" ]; then
+                    mv "ipaDown.dmg" "$DMG_OUT_NAME"
+                else
+                    mv ipaDown*.dmg "$DMG_OUT_NAME" 2>/dev/null || true
+                fi
+                echo "✅ macOS 应用 DMG 制作完成: $BUILD_DIR/$DMG_OUT_NAME"
+            else
+                echo "⚠️ create-dmg 虽然存在但执行失败，降级使用 zip 压缩..."
+                cd "$TEMP_APP_DIR"
+                zip -ry "../ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip" "ipaDown.app" >/dev/null
+                cd ..
+                echo "✅ macOS 应用提取完成: $BUILD_DIR/ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip"
+            fi
         else
             echo "⚠️ 未找到 create-dmg CLI，降级使用 zip 压缩..."
             cd "$TEMP_APP_DIR"
-            zip -r "../ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip" "ipaDown.app" >/dev/null
+            zip -ry "../ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip" "ipaDown.app" >/dev/null
             cd ..
             echo "✅ macOS 应用提取完成: $BUILD_DIR/ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip"
         fi
@@ -111,6 +134,8 @@ for TARGET_ARCH in "arm64" "x86_64"; do
     fi
 done
 
+
+
 # 4. 编译 iOS 版本
 echo ">>> 开始编译 iOS 版本..."
 cd "$PROJECT_DIR"
@@ -119,16 +144,14 @@ xcodebuild clean archive \
     -scheme "$SCHEME" \
     -destination 'generic/platform=iOS' \
     -archivePath "$IOS_ARCHIVE" \
-    CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO \
     | xcpretty || xcodebuild clean archive \
     -workspace "$WORKSPACE" \
     -scheme "$SCHEME" \
     -destination 'generic/platform=iOS' \
-    -archivePath "$IOS_ARCHIVE" \
-    CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO || true
+    -archivePath "$IOS_ARCHIVE"
 
 if [ ! -d "$IOS_ARCHIVE" ]; then
-    echo "⚠️ iOS Archive 构建未就绪（如缺少 iOS SDK），跳过 iOS .ipa 打包"
+    echo "⚠️ iOS 构建失败或 iOS SDK 未安装，跳过 iOS 部分。"
 else
     echo "✅ iOS Archive 构建成功！"
 fi
@@ -142,40 +165,49 @@ if [ -d "$IOS_APP_PATH" ]; then
     cp -R "$IOS_APP_PATH" "Payload/"
     APP_VERSION=$(defaults read "$(pwd)/Payload/ipaDown.app/Info.plist" CFBundleShortVersionString)
 
-    zip -qr "ipaDown_${APP_VERSION}_iOS.ipa" "Payload"
+    zip -qry "ipaDown_${APP_VERSION}_iOS.ipa" "Payload"
     rm -rf "Payload"
     echo "✅ iOS 应用打包完成: $BUILD_DIR/ipaDown_${APP_VERSION}_iOS.ipa"
 else
-    echo "❌ 找不到 iOS 应用: $IOS_APP_PATH"
+    echo "⚠️ 未找到 iOS 应用构建产物，跳过 iOS 打包。"
 fi
 
-# 6. 生成 Sparkle appcast.xml (针对新产生的双架构 macOS DMG)
+# 6. 生成 Sparkle appcast.xml (针对新产生的 arm64 macOS 包)
 echo ">>> 开始更新 Sparkle appcast.xml..."
 APPCAST_FILE="$PROJECT_DIR/appcast.xml"
 DMG_ARM64="$BUILD_DIR/ipaDown_${APP_VERSION}_arm64.dmg"
-DMG_X86_64="$BUILD_DIR/ipaDown_${APP_VERSION}_x86_64.dmg"
+ZIP_ARM64="$BUILD_DIR/ipaDown_${APP_VERSION}_Mac_arm64.zip"
 
-if [ -f "$DMG_ARM64" ] && [ -f "$DMG_X86_64" ]; then
+RELEASE_FILE=""
+URL_ARM64=""
+TYPE_ARM64=""
+
+if [ -f "$DMG_ARM64" ]; then
+    RELEASE_FILE="$DMG_ARM64"
+    URL_ARM64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_arm64.dmg"
+    TYPE_ARM64="application/octet-stream"
+elif [ -f "$ZIP_ARM64" ]; then
+    RELEASE_FILE="$ZIP_ARM64"
+    URL_ARM64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_Mac_arm64.zip"
+    TYPE_ARM64="application/zip"
+fi
+
+if [ -n "$RELEASE_FILE" ]; then
     SIGN_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -name "sign_update" -type f -perm +111 | head -n 1)
 
     SPARKLE_VERSION="$PROJECT_BUILD"
     echo "使用项目 Build 号 (sparkle:version): $SPARKLE_VERSION"
 
     if [ -n "$SIGN_TOOL" ]; then
-        echo "正在生成 DMG 的 EdDSA 签名..."
-        SIG_ARM64=$($SIGN_TOOL "$DMG_ARM64")
-        SIG_X86_64=$($SIGN_TOOL "$DMG_X86_64")
+        echo "正在生成发布包的 EdDSA 签名..."
+        SIG_ARM64=$($SIGN_TOOL "$RELEASE_FILE")
     else
         echo "⚠️ 找不到 sign_update 工具，将插入占位签名。"
         SIG_ARM64="sparkle:edSignature=\"YOUR_SIGNATURE_HERE\""
-        SIG_X86_64="sparkle:edSignature=\"YOUR_SIGNATURE_HERE\""
     fi
 
-    SIZE_ARM64=$(stat -f%z "$DMG_ARM64")
-    SIZE_X86_64=$(stat -f%z "$DMG_X86_64")
+    SIZE_ARM64=$(stat -f%z "$RELEASE_FILE")
     PUB_DATE=$(date -R)
-    URL_ARM64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_arm64.dmg"
-    URL_X86_64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_x86_64.dmg"
 
     cat <<EOF > "$APPCAST_FILE"
 <?xml version="1.0" encoding="utf-8"?>
@@ -188,17 +220,16 @@ if [ -f "$DMG_ARM64" ] && [ -f "$DMG_X86_64" ]; then
             <sparkle:version>$SPARKLE_VERSION</sparkle:version>
             <sparkle:shortVersionString>$APP_VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="$URL_ARM64" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" $SIG_ARM64/>
-            <enclosure url="$URL_X86_64" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" $SIG_X86_64/>
+            <enclosure url="$URL_ARM64" length="$SIZE_ARM64" type="$TYPE_ARM64" sparkle:os="macos" sparkle:nativeArchitecture="arm64" $SIG_ARM64/>
         </item>
     </channel>
 </rss>
 EOF
     echo "✅ appcast.xml 更新完成！"
-    echo "📌 请在 GitHub 创建 Tag v$APP_VERSION 并使用 gh 命令分别上传: "
-    echo "$DMG_ARM64 和 $DMG_X86_64"
+    echo "📌 请在 GitHub 创建 Tag v$APP_VERSION 并使用 gh 命令上传: "
+    echo "$RELEASE_FILE"
 else
-    echo "⚠️ 未找到两份期望的 DMG 文件，跳过更新 appcast.xml"
+    echo "⚠️ 未找到期望的 macOS 发布包 (DMG 或 ZIP)，跳过更新 appcast.xml"
 fi
 
 echo "=========================================="

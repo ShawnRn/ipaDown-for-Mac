@@ -22,7 +22,12 @@ echo "=========================================="
 
 # 2 & 3. 编译与提取 macOS 版本 (双架构分离)
 echo ">>> 开始编译 macOS 版本..."
-for TARGET_ARCH in "arm64" "x86_64"; do
+cd "$PROJECT_DIR"
+
+# 清理旧的归档文件，确保能够重新编译
+rm -rf "$BUILD_DIR/Mac_arm64.xcarchive"
+
+for TARGET_ARCH in "arm64"; do
     echo "=================================================="
     echo ">>> 正在编译 macOS 架构: ${TARGET_ARCH} ..."
     echo "=================================================="
@@ -32,13 +37,13 @@ for TARGET_ARCH in "arm64" "x86_64"; do
     xcodebuild clean archive \
         -workspace "$WORKSPACE" \
         -scheme "$SCHEME" \
-        -destination "generic/platform=macOS,arch=${TARGET_ARCH}" \
+        -destination "generic/platform=macOS" \
         -archivePath "$CURRENT_MAC_ARCHIVE" \
         ARCHS="${TARGET_ARCH}" \
         | xcpretty || xcodebuild clean archive \
         -workspace "$WORKSPACE" \
         -scheme "$SCHEME" \
-        -destination "generic/platform=macOS,arch=${TARGET_ARCH}" \
+        -destination "generic/platform=macOS" \
         -archivePath "$CURRENT_MAC_ARCHIVE" \
         ARCHS="${TARGET_ARCH}"
         
@@ -57,28 +62,40 @@ for TARGET_ARCH in "arm64" "x86_64"; do
         mkdir -p "$TEMP_APP_DIR"
         cp -R "$MAC_APP_PATH" "$TEMP_APP_DIR/ipaDown.app"
         
+        # 4. 对 macOS 应用进行 Ad-hoc 重新签名，启用 Hardened Runtime 并注入 entitlements
+        echo ">>> 对 macOS 应用进行 Ad-hoc 重新签名 (${TARGET_ARCH})..."
+        codesign --force --deep --sign - --options runtime --entitlements "$PROJECT_DIR/ipaDown/ipaDown.entitlements" "$TEMP_APP_DIR/ipaDown.app"
+        
         APP_VERSION=$(defaults read "$(pwd)/$TEMP_APP_DIR/ipaDown.app/Contents/Info.plist" CFBundleShortVersionString)
         
         # 尝试使用 create-dmg
         if command -v create-dmg &> /dev/null; then
             echo ">>> 使用 create-dmg 创建 DMG (${TARGET_ARCH})..."
             DMG_OUT_NAME="ipaDown_${APP_VERSION}_${TARGET_ARCH}.dmg"
-            rm -f "$DMG_OUT_NAME"
+            rm -f "$DMG_OUT_NAME" "ipaDown $APP_VERSION.dmg" "ipaDown.dmg"
             create-dmg "$TEMP_APP_DIR/ipaDown.app" "$BUILD_DIR" || true
             
-            if [ -f "ipaDown $APP_VERSION.dmg" ]; then
-                mv "ipaDown $APP_VERSION.dmg" "$DMG_OUT_NAME"
-            elif [ -f "ipaDown.dmg" ]; then
-                mv "ipaDown.dmg" "$DMG_OUT_NAME"
+            # 检查 DMG 是否真的生成了
+            if [ -f "ipaDown $APP_VERSION.dmg" ] || [ -f "ipaDown.dmg" ]; then
+                if [ -f "ipaDown $APP_VERSION.dmg" ]; then
+                    mv "ipaDown $APP_VERSION.dmg" "$DMG_OUT_NAME"
+                elif [ -f "ipaDown.dmg" ]; then
+                    mv "ipaDown.dmg" "$DMG_OUT_NAME"
+                else
+                    mv ipaDown*.dmg "$DMG_OUT_NAME" 2>/dev/null || true
+                fi
+                echo "✅ macOS 应用 DMG 制作完成: $BUILD_DIR/$DMG_OUT_NAME"
             else
-                mv ipaDown*.dmg "$DMG_OUT_NAME" 2>/dev/null || true
+                echo "⚠️ create-dmg 虽然存在但执行失败，降级使用 zip 压缩..."
+                cd "$TEMP_APP_DIR"
+                zip -ry "../ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip" "ipaDown.app" >/dev/null
+                cd ..
+                echo "✅ macOS 应用提取完成: $BUILD_DIR/ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip"
             fi
-            
-            echo "✅ macOS 应用 DMG 制作完成: $BUILD_DIR/$DMG_OUT_NAME"
         else
             echo "⚠️ 未找到 create-dmg CLI，降级使用 zip 压缩..."
             cd "$TEMP_APP_DIR"
-            zip -r "../ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip" "ipaDown.app" >/dev/null
+            zip -ry "../ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip" "ipaDown.app" >/dev/null
             cd ..
             echo "✅ macOS 应用提取完成: $BUILD_DIR/ipaDown_${APP_VERSION}_Mac_${TARGET_ARCH}.zip"
         fi
@@ -117,7 +134,7 @@ if [ -d "$IOS_APP_PATH" ]; then
     cd "$BUILD_DIR"
     mkdir -p "Payload"
     cp -R "$IOS_APP_PATH" "Payload/"
-    zip -qr "ipaDown_${APP_VERSION}_iOS.ipa" "Payload"
+    zip -qry "ipaDown_${APP_VERSION}_iOS.ipa" "Payload"
     rm -rf "Payload"
     echo "✅ iOS 应用打包完成: $BUILD_DIR/ipaDown_${APP_VERSION}_iOS.ipa"
 fi

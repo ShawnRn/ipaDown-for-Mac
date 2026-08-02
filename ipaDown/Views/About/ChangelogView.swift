@@ -20,6 +20,13 @@ struct ChangelogView: View {
     
     let changelogs: [ChangelogItem] = [
         ChangelogItem(
+            version: "1.4.3",
+            date: "2026-08-02",
+            changes: [
+                "修复 Apple 账号登录接口报 HTTP 404 网络错误的问题。"
+            ]
+        ),
+        ChangelogItem(
             version: "1.4",
             date: "2026-03-22",
             changes: [

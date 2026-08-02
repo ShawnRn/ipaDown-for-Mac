@@ -3,13 +3,12 @@
     <channel>
         <title>ipaDown-for-Mac Updates</title>
         <item>
-            <title>v1.4.2</title>
-            <pubDate>Fri, 24 Jul 2026 16:41:47 +0800</pubDate>
-            <sparkle:version>2026072401</sparkle:version>
-            <sparkle:shortVersionString>1.4.2</sparkle:shortVersionString>
+            <title>v1.4.3</title>
+            <pubDate>Sun, 02 Aug 2026 11:10:49 +0800</pubDate>
+            <sparkle:version>2026080201</sparkle:version>
+            <sparkle:shortVersionString>1.4.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.4.2/ipaDown_1.4.2_arm64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="WZtNim1sZn6rk0fJOKs240ndJYyAWNoYYBDcoyx52K6AXQ/MmOyV4WLKXjPiWtdbIk7eYjp94Ss/Iqv9R2vVCg==" length="3465545"/>
-            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.4.2/ipaDown_1.4.2_x86_64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" sparkle:edSignature="Ck5w5H6Ma8G5yPcAm+jIE3zb5ogek0VGVmSmOqRiivaqc7c0hCbJMr/XiL6mzPv7BayceuiGpgbj0XaReQKtDg==" length="3516333"/>
+            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.4.3/ipaDown_1.4.3_arm64.dmg" length="4019209" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="OQc9l7ewIs4680MGiVXh5CsCJxIhWPe3DDXUGMZSPvgfnHT4tFz0lG1L+yE18Vnip109jeHFNbYkWBvc7GR7DQ==" length="4019209"/>
         </item>
     </channel>
 </rss>
