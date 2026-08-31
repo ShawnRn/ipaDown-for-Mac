@@ -12,77 +12,140 @@ import Foundation
 class AccountManager {
     /// 已保存的账号列表
     var accounts: [Account] = []
-    
+
     /// 当前活跃账号
     var activeAccount: Account?
-    
+
     /// 登录状态
     var isLoggingIn = false
-    
+
     /// 需要两步验证
     var needsTwoFactorCode = false
-    
+
     /// 错误信息
     var errorMessage: String?
-    
+
     /// 登录表单
     var loginEmail = ""
     var loginPassword = ""
     var twoFactorCode = ""
-    
+
     private let logger = AppLogger.shared
-    
+
     init() {
         loadAccounts()
     }
-    
+
+    /// 正在交互式刷新 Token 的账号（用于 2FA 流程）
+    var accountBeingRefreshed: Account?
+
     // MARK: - 账号操作
-    
+
     /// 登录
     func login() async {
         guard !loginEmail.isEmpty, !loginPassword.isEmpty else {
             errorMessage = "请输入邮箱和密码"
             return
         }
-        
+
         isLoggingIn = true
         errorMessage = nil
-        
+
         do {
             let account = try await AuthService.authenticate(
                 email: loginEmail,
                 password: loginPassword,
                 code: twoFactorCode
             )
-            
+
             // 检查是否已存在该账号，并将其置顶
             accounts.removeAll { $0.email == account.email }
             accounts.insert(account, at: 0)
             activeAccount = account
-            
+
             saveAccounts()
             clearLoginForm()
-            
+
         } catch IPAError.codeRequired {
             needsTwoFactorCode = true
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
         }
-        
+
         isLoggingIn = false
     }
-    
-    /// 提交两步验证码
+
+    /// 提交两步验证码（支持新登录与已有账号 Token 续期）
     func submitTwoFactorCode() async {
         guard !twoFactorCode.isEmpty else {
             errorMessage = "请输入验证码"
             return
         }
-        needsTwoFactorCode = false
-        await login()
+
+        isLoggingIn = true
+        errorMessage = nil
+
+        do {
+            if let targetAccount = accountBeingRefreshed {
+                // 已有账号续期流程
+                let refreshed = try await AuthService.refreshToken(for: targetAccount, code: twoFactorCode)
+                updateAccount(refreshed)
+                logger.success("账号", "2FA 验证成功，Token 已续期: \(targetAccount.email)")
+                clearLoginForm()
+            } else {
+                // 新账号登录流程
+                let account = try await AuthService.authenticate(
+                    email: loginEmail,
+                    password: loginPassword,
+                    code: twoFactorCode
+                )
+                accounts.removeAll { $0.email == account.email }
+                accounts.insert(account, at: 0)
+                activeAccount = account
+                saveAccounts()
+                clearLoginForm()
+            }
+        } catch IPAError.codeRequired {
+            needsTwoFactorCode = true
+            errorMessage = "验证码不正确或已过期，请重新输入"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoggingIn = false
     }
-    
+
+    /// 交互式刷新指定账号的 Token（需要 2FA 时唤起输入浮层）
+    /// - Returns: 是否刷新成功
+    func refreshAccountInteractively(_ account: Account) async -> Bool {
+        isLoggingIn = true
+        errorMessage = nil
+        accountBeingRefreshed = account
+        loginEmail = account.email
+        loginPassword = account.password
+        twoFactorCode = ""
+
+        do {
+            let refreshed = try await AuthService.refreshToken(for: account, code: "")
+            updateAccount(refreshed)
+            logger.success("账号", "Token 刷新成功: \(account.email)")
+            clearLoginForm()
+            isLoggingIn = false
+            return true
+        } catch IPAError.codeRequired {
+            logger.info("账号", "Token 刷新需二次验证 (2FA): \(account.email)")
+            needsTwoFactorCode = true
+            isLoggingIn = false
+            return false
+        } catch {
+            errorMessage = error.localizedDescription
+            logger.error("账号", "刷新 Token 失败 (\(account.email)): \(error.localizedDescription)")
+            isLoggingIn = false
+            return false
+        }
+    }
+
     /// 删除账号
     func deleteAccount(_ account: Account) {
         accounts.removeAll { $0.id == account.id }
@@ -92,13 +155,13 @@ class AccountManager {
         saveAccounts()
         logger.info("账号", "已删除账号: \(account.email)")
     }
-    
+
     /// 已登录账号的所有国家代码（去重排序）
     var availableCountryCodes: [String] {
         let codes = accounts.compactMap { $0.countryCode }
         return Array(Set(codes)).sorted()
     }
-    
+
     /// 切换活跃账号
     func switchAccount(to account: Account) {
         if let index = accounts.firstIndex(where: { $0.id == account.id }) {
@@ -109,7 +172,7 @@ class AccountManager {
             logger.info("账号", "切换到账号并置顶: \(account.email)")
         }
     }
-    
+
     /// 根据国家代码切换账号
     func switchToAccount(forCountryCode code: String) {
         if let account = accounts.first(where: { $0.countryCode == code }) {
@@ -118,8 +181,8 @@ class AccountManager {
             }
         }
     }
-    
-    /// 刷新 Token
+
+    /// 静默刷新 Token
     /// - Returns: 刷新后的 Account，失败则返回 nil
     @discardableResult
     func refreshToken(for account: Account) async -> Account? {
@@ -129,11 +192,11 @@ class AccountManager {
             logger.success("账号", "Token 刷新成功: \(account.email)")
             return refreshed
         } catch {
-            logger.error("账号", "刷新 Token 失败 (\(account.email)): \(error.localizedDescription)")
+            logger.error("账号", "静默刷新 Token 失败 (\(account.email)): \(error.localizedDescription)")
             return nil
         }
     }
-    
+
     /// 自动刷新所有账号的 Token
     func refreshAllTokens() async {
         logger.info("账号", "开始自动刷新所有账号 Token...")
@@ -142,9 +205,9 @@ class AccountManager {
         }
         logger.info("账号", "所有账号 Token 刷新尝试完成")
     }
-    
+
     // MARK: - 持久化
-    
+
     /// 更新已有账号数据（如 cookies 变更后）
     func updateAccount(_ account: Account) {
         if let index = accounts.firstIndex(where: { $0.id == account.id }) {
@@ -155,7 +218,7 @@ class AccountManager {
         }
         saveAccounts()
     }
-    
+
     private var accountsFileURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("ipaDown", isDirectory: true)
@@ -168,20 +231,20 @@ class AccountManager {
             try? data.write(to: accountsFileURL, options: .atomic)
         }
     }
-    
+
     private func loadAccounts() {
         // 优先从严格专属沙盒目录读取 (.json 文件)
         if let data = try? Data(contentsOf: accountsFileURL),
            let saved = try? JSONDecoder().decode([Account].self, from: data) {
             accounts = saved
             activeAccount = accounts.first
-            
+
             // 例行清理，防止任何早期版本的残留滞留在 Keychain 或 UserDefaults 中
             KeychainHelper.delete(forKey: "accounts")
             UserDefaults.standard.removeObject(forKey: "accounts")
             return
         }
-        
+
         // 向下兼容并迁移：如果在上一版本迁移中留在了 UserDefaults 里
         if let data = UserDefaults.standard.data(forKey: "accounts"),
            let saved = try? JSONDecoder().decode([Account].self, from: data) {
@@ -193,7 +256,7 @@ class AccountManager {
             logger.info("账号", "成功从 UserDefaults 迁移账号数据至私有数据目录文件中，旧有痕迹已抹除")
             return
         }
-        
+
         // 向下兼容并迁移：如果还有最老版本的残渣留在 Keychain 里
         if let saved = KeychainHelper.loadCodable([Account].self, forKey: "accounts") {
             accounts = saved
@@ -203,7 +266,7 @@ class AccountManager {
             logger.info("账号", "成功从旧版 Keychain 迁移账号数据至私有数据目录文件内，原缓存已抹除")
         }
     }
-    
+
     private func clearLoginForm() {
         loginEmail = ""
         loginPassword = ""

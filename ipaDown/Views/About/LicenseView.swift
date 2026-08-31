@@ -18,7 +18,7 @@ struct LicenseItem: Identifiable {
 struct LicenseView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    
+
     let licenses: [LicenseItem] = [
         LicenseItem(
             name: "Asspp",
@@ -33,6 +33,12 @@ struct LicenseView: View {
             type: "Key Parameters & Protocol Reference"
         ),
         LicenseItem(
+            name: "ipatool-sapfix",
+            license: "MIT",
+            description: "macOS CommerceKit SAP signing implementation reference.\nhttps://github.com/maksimryabkin/ipatool-sapfix",
+            type: "SAP Signing Reference"
+        ),
+        LicenseItem(
             name: "Sparkle",
             license: nil,
             description: "A software update framework for macOS.\nhttps://sparkle-project.org/",
@@ -45,7 +51,7 @@ struct LicenseView: View {
             type: "Core Development Assistant"
         )
     ]
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Motrix Style Header
@@ -56,7 +62,7 @@ struct LicenseView: View {
                     .frame(width: 64, height: 64)
                     .background(Color.accentColor.opacity(0.1))
                     .clipShape(Circle())
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text("开源许可")
                         .font(.title2.bold())
@@ -64,11 +70,11 @@ struct LicenseView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
             }
             .padding(24)
-            
+
             // Content
             ScrollView {
                 VStack(spacing: 16) {
@@ -78,7 +84,7 @@ struct LicenseView: View {
                             HStack {
                                 Text(item.name)
                                     .font(.headline)
-                                
+
                                 if let license = item.license {
                                     Text(license)
                                         .font(.system(size: 10, weight: .bold))
@@ -88,9 +94,9 @@ struct LicenseView: View {
                                         .foregroundStyle(Color.accentColor)
                                         .clipShape(Capsule())
                                 }
-                                
+
                                 Spacer()
-                                
+
                                 Text(item.type)
                                     .font(.caption)
                                     .padding(.horizontal, 8)
@@ -99,7 +105,7 @@ struct LicenseView: View {
                                     .foregroundStyle(.secondary)
                                     .clipShape(Capsule())
                             }
-                            
+
                             // Row 2: Description
                             Text(item.description)
                                 .font(.subheadline)
@@ -121,7 +127,7 @@ struct LicenseView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
             }
-            
+
             // Footer
             HStack {
                 Spacer()

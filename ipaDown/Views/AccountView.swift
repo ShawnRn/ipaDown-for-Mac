@@ -15,10 +15,10 @@ struct AccountView: View {
     @State private var refreshResultTitle = ""
     @State private var refreshResultMessage = ""
     @State private var showingAddAccount = false
-    
+
     var body: some View {
         @Bindable var manager = accountManager
-        
+
         Group {
             if accountManager.accounts.isEmpty {
                 ContentUnavailableView(
@@ -73,20 +73,20 @@ struct AccountView: View {
             Text(refreshResultMessage)
         }
     }
-    
+
     // MARK: - 统一账号卡片
-    
+
     @ViewBuilder
     private func accountCard(_ account: Account) -> some View {
         let isActive = account.id == accountManager.activeAccount?.id
-        
+
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: isActive ? "person.crop.circle.fill.badge.checkmark" : "person.crop.circle")
                         .font(.system(size: 40))
                         .foregroundStyle(isActive ? Color.accentColor : .secondary)
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text(account.displayName)
                             .font(.headline)
@@ -94,9 +94,9 @@ struct AccountView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     VStack(alignment: .trailing, spacing: 4) {
                         if let code = account.countryCode {
                             Text(CountryCodes.countryName(for: code))
@@ -106,23 +106,23 @@ struct AccountView: View {
                                 .background(isActive ? Color.accentColor.opacity(0.1) : .secondary.opacity(0.1))
                                 .clipShape(Capsule())
                         }
-                        
+
                         Text("Store: \(account.storeFront)")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                 }
-                
+
                 Divider()
-                
+
                 HStack {
                     Text("Apple 账户: \(account.appleId)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                    
+
                     Spacer(minLength: 16)
-                    
+
                     // 删除按钮
                     Button(role: .destructive) {
                         accountManager.deleteAccount(account)
@@ -132,20 +132,26 @@ struct AccountView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.red)
                     .padding(.trailing, 8)
-                    
+
                     // 刷新按钮
                     Button {
                         Task {
                             isRefreshing = true
-                            if let refreshed = await accountManager.refreshToken(for: account) {
+                            let success = await accountManager.refreshAccountInteractively(account)
+                            isRefreshing = false
+
+                            if success {
                                 refreshResultTitle = "刷新成功"
-                                refreshResultMessage = "账号 \(refreshed.email) 的 Token 已成功更新。"
+                                refreshResultMessage = "账号 \(account.email) 的 Token 已成功更新。"
+                                showingRefreshResult = true
+                            } else if accountManager.needsTwoFactorCode {
+                                // 需要 2FA 验证码，唤起验证码输入浮层
+                                showingAddAccount = true
                             } else {
                                 refreshResultTitle = "刷新失败"
-                                refreshResultMessage = "请检查网络连接或尝试重新登录。"
+                                refreshResultMessage = accountManager.errorMessage ?? "请检查网络连接或尝试重新登录。"
+                                showingRefreshResult = true
                             }
-                            isRefreshing = false
-                            showingRefreshResult = true
                         }
                     } label: {
                         if isRefreshing {
@@ -157,7 +163,7 @@ struct AccountView: View {
                     .buttonStyle(.glass)
                     .controlSize(.small)
                     .disabled(isRefreshing)
-                    
+
                     // 切换按钮
                     Button {
                         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
@@ -177,13 +183,13 @@ struct AccountView: View {
                 .stroke(isActive ? Color.accentColor.opacity(0.5) : Color.clear, lineWidth: 2)
         )
     }
-    
+
     // MARK: - macOS 登录浮层
-    
+
     #if os(macOS)
     private var macOSLoginSection: some View {
         @Bindable var manager = accountManager
-        
+
         return VStack(spacing: 24) {
             HStack(alignment: .top, spacing: 20) {
                 // 左侧应用/Apple 图标
@@ -191,23 +197,23 @@ struct AccountView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 60, height: 60)
-                    
+
                     Image(systemName: "applelogo")
                         .font(.system(size: 32))
                         .foregroundStyle(.white)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 16) {
                     // 标题区
                     VStack(alignment: .leading, spacing: 6) {
                         Text("登录你的 Apple 账户")
                             .font(.headline)
-                        
+
                         Text("输入 Apple 账户的电子邮件和密码。")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     // 输入框组
                     VStack(spacing: 0) {
                         TextField("Apple 账户", text: $manager.loginEmail)
@@ -217,9 +223,9 @@ struct AccountView: View {
                             .textContentType(.emailAddress)
                             .autocorrectionDisabled()
                             .onSubmit { performLogin() }
-                        
+
                         Divider()
-                        
+
                         SecureField("密码", text: $manager.loginPassword)
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 12)
@@ -233,7 +239,7 @@ struct AccountView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
                     )
-                    
+
                     if let error = accountManager.errorMessage {
                         Text(error)
                             .font(.caption)
@@ -241,16 +247,16 @@ struct AccountView: View {
                     }
                 }
             }
-            
+
             // 底部按钮区
             HStack {
                 Spacer()
-                
+
                 Button("取消") {
                     showingAddAccount = false
                 }
                 .keyboardShortcut(.cancelAction)
-                
+
                 Button {
                     performLogin()
                 } label: {
@@ -271,19 +277,19 @@ struct AccountView: View {
         .frame(width: 480)
     }
     #endif
-    
+
     // MARK: - iOS 原生风格登录表单
-    
+
     #if os(iOS)
     private var iOSLoginSection: some View {
         @Bindable var manager = accountManager
-        
+
         return Form {
             Section {
                 HStack {
                     Text("Apple 账户")
                         .frame(width: 80, alignment: .leading)
-                    
+
                     TextField("Apple 账户", text: $manager.loginEmail)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
@@ -291,24 +297,24 @@ struct AccountView: View {
                         .autocorrectionDisabled()
                         .onSubmit { performLogin() }
                 }
-                
+
                 HStack {
                     Text("密码")
                         .frame(width: 80, alignment: .leading)
-                    
+
                     SecureField("必填", text: $manager.loginPassword)
                         .textContentType(.password)
                         .onSubmit { performLogin() }
                 }
             }
-            
+
             if let error = accountManager.errorMessage {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.red)
                     .listRowBackground(Color.clear)
             }
-            
+
             Section {
                 Button {
                     performLogin()
@@ -341,7 +347,7 @@ struct AccountView: View {
         }
     }
     #endif
-    
+
     private func performLogin() {
         guard !accountManager.isLoggingIn else { return }
         Task {
@@ -351,52 +357,52 @@ struct AccountView: View {
             }
         }
     }
-    
+
     // MARK: - 两步验证
-    
+
     private var twoFactorSheet: some View {
         @Bindable var manager = accountManager
-        
+
         return VStack(spacing: 32) { // 增加整体间距以自然撑开内容
             VStack(spacing: 16) {
                 Image(systemName: "shield.checkered")
                     .font(.system(size: 60))
                     .foregroundStyle(Color.accentColor)
                     .symbolEffect(.bounce, value: accountManager.needsTwoFactorCode)
-                
+
                 VStack(spacing: 8) {
                     Text("双重验证")
                         .font(.title2)
                         .fontWeight(.bold)
-                    
+
                     Text("请输入发送到你设备上的 6 位验证码")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
             .padding(.top, 24) // 将顶部元素整体向下推
-            
+
             // Apple 风格 6 位验证码输入
             OTPInputView(code: $manager.twoFactorCode, onComplete: {
                 submitTwoFactor()
             })
-            
+
             if let error = accountManager.errorMessage {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
             }
-            
+
             HStack(spacing: 16) {
                 Button("取消") {
                     accountManager.needsTwoFactorCode = false
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
+
                 Button("验证") {
                     submitTwoFactor()
                 }
@@ -416,13 +422,20 @@ struct AccountView: View {
         .frame(maxWidth: 400)
         #endif
     }
-    
+
     private func submitTwoFactor() {
         guard accountManager.twoFactorCode.count == 6, !accountManager.isLoggingIn else { return }
+        let isRefreshingAccount = accountManager.accountBeingRefreshed != nil
+        let targetEmail = accountManager.accountBeingRefreshed?.email ?? accountManager.loginEmail
         Task {
             await accountManager.submitTwoFactorCode()
             if accountManager.errorMessage == nil && !accountManager.needsTwoFactorCode {
                 showingAddAccount = false
+                if isRefreshingAccount {
+                    refreshResultTitle = "续期成功"
+                    refreshResultMessage = "账号 \(targetEmail) 的 Token 与会话已成功更新！"
+                    showingRefreshResult = true
+                }
             }
         }
     }
@@ -433,9 +446,9 @@ struct AccountView: View {
 struct OTPInputView: View {
     @Binding var code: String
     var onComplete: () -> Void
-    
+
     @FocusState private var isFocused: Bool
-    
+
     var body: some View {
         ZStack {
             // 真实的隐形输入框用来承担原生键盘与事件
@@ -461,7 +474,7 @@ struct OTPInputView: View {
                         }
                     }
                 }
-            
+
             // 呈现用的视觉盒子
             HStack(spacing: 12) {
                 ForEach(0..<6, id: \.self) { index in
@@ -488,12 +501,12 @@ struct OTPInputView: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func box(at index: Int) -> some View {
         let char = getChar(at: index)
         let isActive = isFocused && (code.count == index || (code.count == 6 && index == 5))
-        
+
         VStack(spacing: 0) {
             Text(char)
                 .font(.system(size: 28, weight: .semibold, design: .rounded))
@@ -508,7 +521,7 @@ struct OTPInputView: View {
                 )
                 // 聚焦时的微光效果
                 .shadow(color: isActive ? Color.accentColor.opacity(0.15) : Color.clear, radius: 4, x: 0, y: 0)
-            
+
             // 下划线分隔（可选，Apple 风格通常不需要，但增加辨识度）
             if index == 2 {
                 // 这里如果不想要下划线可以去掉，原代码有个 "-" 符号
@@ -517,7 +530,7 @@ struct OTPInputView: View {
         // 在第 2 和第 3 个盒子后加一点间距
         .padding(.trailing, index == 2 ? 8 : 0)
     }
-    
+
     private func getChar(at index: Int) -> String {
         if index < code.count {
             let idx = code.index(code.startIndex, offsetBy: index)

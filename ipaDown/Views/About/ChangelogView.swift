@@ -20,6 +20,15 @@ struct ChangelogView: View {
     
     let changelogs: [ChangelogItem] = [
         ChangelogItem(
+            version: "1.4.4",
+            date: "2026-08-31",
+            changes: [
+                "适配 Apple 新版 SAP 安全认证，修复登录时 HTTP 403 错误。",
+                "登录端点改为通过 Apple bag 动态解析，并安全处理 Store Pod 重定向。",
+                "完善 Token 刷新与双重验证码续期流程，改进认证错误提示。"
+            ]
+        ),
+        ChangelogItem(
             version: "1.4.3",
             date: "2026-08-02",
             changes: [

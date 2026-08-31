@@ -52,28 +52,29 @@ fi
 # 2 & 3. 编译与提取 macOS 版本 (双架构分离)
 echo ">>> 开始编译 macOS 版本..."
 
-# 清理旧的归档文件，确保能够重新编译
-rm -rf "$BUILD_DIR/Mac_arm64.xcarchive"
-
-for TARGET_ARCH in "arm64"; do
+for TARGET_ARCH in "arm64" "x86_64"; do
     echo "=================================================="
     echo ">>> 正在编译 macOS 架构: ${TARGET_ARCH} ..."
     echo "=================================================="
     
     CURRENT_MAC_ARCHIVE="$BUILD_DIR/Mac_${TARGET_ARCH}.xcarchive"
     
-    xcodebuild clean archive \
-        -workspace "$WORKSPACE" \
-        -scheme "$SCHEME" \
-        -destination "generic/platform=macOS" \
-        -archivePath "$CURRENT_MAC_ARCHIVE" \
-        ARCHS="${TARGET_ARCH}" \
-        | xcpretty || xcodebuild clean archive \
-        -workspace "$WORKSPACE" \
-        -scheme "$SCHEME" \
-        -destination "generic/platform=macOS" \
-        -archivePath "$CURRENT_MAC_ARCHIVE" \
-        ARCHS="${TARGET_ARCH}"
+    if command -v xcpretty &> /dev/null; then
+        xcodebuild clean archive \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -destination "generic/platform=macOS" \
+            -archivePath "$CURRENT_MAC_ARCHIVE" \
+            ARCHS="${TARGET_ARCH}" \
+            | xcpretty
+    else
+        xcodebuild clean archive \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -destination "generic/platform=macOS" \
+            -archivePath "$CURRENT_MAC_ARCHIVE" \
+            ARCHS="${TARGET_ARCH}"
+    fi
         
     if [ ! -d "$CURRENT_MAC_ARCHIVE" ]; then
         echo "❌ macOS (${TARGET_ARCH}) 构建失败！"
@@ -89,6 +90,9 @@ for TARGET_ARCH in "arm64"; do
         TEMP_APP_DIR="ipaDown_${TARGET_ARCH}_temp"
         mkdir -p "$TEMP_APP_DIR"
         cp -R "$MAC_APP_PATH" "$TEMP_APP_DIR/ipaDown.app"
+
+        # FinderInfo / resource fork 会破坏嵌套 Sparkle 组件的代码签名校验。
+        xattr -cr "$TEMP_APP_DIR/ipaDown.app"
         
         # 4. 对 macOS 应用进行 Ad-hoc 重新签名，启用 Hardened Runtime 并注入 entitlements
         echo ">>> 对 macOS 应用进行 Ad-hoc 重新签名 (${TARGET_ARCH})..."
@@ -139,16 +143,32 @@ done
 # 4. 编译 iOS 版本
 echo ">>> 开始编译 iOS 版本..."
 cd "$PROJECT_DIR"
-xcodebuild clean archive \
-    -workspace "$WORKSPACE" \
-    -scheme "$SCHEME" \
-    -destination 'generic/platform=iOS' \
-    -archivePath "$IOS_ARCHIVE" \
-    | xcpretty || xcodebuild clean archive \
-    -workspace "$WORKSPACE" \
-    -scheme "$SCHEME" \
-    -destination 'generic/platform=iOS' \
-    -archivePath "$IOS_ARCHIVE"
+if command -v xcpretty &> /dev/null; then
+    xcodebuild clean archive \
+        -workspace "$WORKSPACE" \
+        -scheme "$SCHEME" \
+        -destination 'generic/platform=iOS' \
+        -archivePath "$IOS_ARCHIVE" \
+        | xcpretty
+else
+    xcodebuild clean archive \
+        -workspace "$WORKSPACE" \
+        -scheme "$SCHEME" \
+        -destination 'generic/platform=iOS' \
+        -archivePath "$IOS_ARCHIVE"
+fi
+
+# 侧载 IPA 会在安装时重新签名；本机没有 provisioning profile 时回退到无签名归档。
+if [ ! -d "$IOS_ARCHIVE" ]; then
+    echo "⚠️ 未找到可用的 iOS 描述文件，回退到无签名侧载构建..."
+    xcodebuild clean archive \
+        -workspace "$WORKSPACE" \
+        -scheme "$SCHEME" \
+        -destination 'generic/platform=iOS' \
+        -archivePath "$IOS_ARCHIVE" \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO
+fi
 
 if [ ! -d "$IOS_ARCHIVE" ]; then
     echo "⚠️ iOS 构建失败或 iOS SDK 未安装，跳过 iOS 部分。"
@@ -172,41 +192,60 @@ else
     echo "⚠️ 未找到 iOS 应用构建产物，跳过 iOS 打包。"
 fi
 
-# 6. 生成 Sparkle appcast.xml (针对新产生的 arm64 macOS 包)
+# 6. 生成 Sparkle appcast.xml（分别提供 arm64 与 x86_64 包）
 echo ">>> 开始更新 Sparkle appcast.xml..."
 APPCAST_FILE="$PROJECT_DIR/appcast.xml"
 DMG_ARM64="$BUILD_DIR/ipaDown_${APP_VERSION}_arm64.dmg"
 ZIP_ARM64="$BUILD_DIR/ipaDown_${APP_VERSION}_Mac_arm64.zip"
+DMG_X86_64="$BUILD_DIR/ipaDown_${APP_VERSION}_x86_64.dmg"
+ZIP_X86_64="$BUILD_DIR/ipaDown_${APP_VERSION}_Mac_x86_64.zip"
 
-RELEASE_FILE=""
+RELEASE_FILE_ARM64=""
 URL_ARM64=""
 TYPE_ARM64=""
+RELEASE_FILE_X86_64=""
+URL_X86_64=""
+TYPE_X86_64=""
 
 if [ -f "$DMG_ARM64" ]; then
-    RELEASE_FILE="$DMG_ARM64"
+    RELEASE_FILE_ARM64="$DMG_ARM64"
     URL_ARM64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_arm64.dmg"
     TYPE_ARM64="application/octet-stream"
 elif [ -f "$ZIP_ARM64" ]; then
-    RELEASE_FILE="$ZIP_ARM64"
+    RELEASE_FILE_ARM64="$ZIP_ARM64"
     URL_ARM64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_Mac_arm64.zip"
     TYPE_ARM64="application/zip"
 fi
 
-if [ -n "$RELEASE_FILE" ]; then
+if [ -f "$DMG_X86_64" ]; then
+    RELEASE_FILE_X86_64="$DMG_X86_64"
+    URL_X86_64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_x86_64.dmg"
+    TYPE_X86_64="application/octet-stream"
+elif [ -f "$ZIP_X86_64" ]; then
+    RELEASE_FILE_X86_64="$ZIP_X86_64"
+    URL_X86_64="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v${APP_VERSION}/ipaDown_${APP_VERSION}_Mac_x86_64.zip"
+    TYPE_X86_64="application/zip"
+fi
+
+if [ -n "$RELEASE_FILE_ARM64" ] && [ -n "$RELEASE_FILE_X86_64" ]; then
     SIGN_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -name "sign_update" -type f -perm +111 | head -n 1)
 
     SPARKLE_VERSION="$PROJECT_BUILD"
     echo "使用项目 Build 号 (sparkle:version): $SPARKLE_VERSION"
 
+    SIZE_ARM64=$(stat -f%z "$RELEASE_FILE_ARM64")
+    SIZE_X86_64=$(stat -f%z "$RELEASE_FILE_X86_64")
+
     if [ -n "$SIGN_TOOL" ]; then
         echo "正在生成发布包的 EdDSA 签名..."
-        SIG_ARM64=$($SIGN_TOOL "$RELEASE_FILE")
+        SIG_ARM64=$($SIGN_TOOL "$RELEASE_FILE_ARM64")
+        SIG_X86_64=$($SIGN_TOOL "$RELEASE_FILE_X86_64")
     else
         echo "⚠️ 找不到 sign_update 工具，将插入占位签名。"
-        SIG_ARM64="sparkle:edSignature=\"YOUR_SIGNATURE_HERE\""
+        SIG_ARM64="sparkle:edSignature=\"YOUR_SIGNATURE_HERE\" length=\"$SIZE_ARM64\""
+        SIG_X86_64="sparkle:edSignature=\"YOUR_SIGNATURE_HERE\" length=\"$SIZE_X86_64\""
     fi
 
-    SIZE_ARM64=$(stat -f%z "$RELEASE_FILE")
     PUB_DATE=$(date -R)
 
     cat <<EOF > "$APPCAST_FILE"
@@ -220,16 +259,18 @@ if [ -n "$RELEASE_FILE" ]; then
             <sparkle:version>$SPARKLE_VERSION</sparkle:version>
             <sparkle:shortVersionString>$APP_VERSION</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="$URL_ARM64" length="$SIZE_ARM64" type="$TYPE_ARM64" sparkle:os="macos" sparkle:nativeArchitecture="arm64" $SIG_ARM64/>
+            <enclosure url="$URL_ARM64" type="$TYPE_ARM64" sparkle:os="macos" sparkle:nativeArchitecture="arm64" $SIG_ARM64/>
+            <enclosure url="$URL_X86_64" type="$TYPE_X86_64" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" $SIG_X86_64/>
         </item>
     </channel>
 </rss>
 EOF
     echo "✅ appcast.xml 更新完成！"
     echo "📌 请在 GitHub 创建 Tag v$APP_VERSION 并使用 gh 命令上传: "
-    echo "$RELEASE_FILE"
+    echo "$RELEASE_FILE_ARM64"
+    echo "$RELEASE_FILE_X86_64"
 else
-    echo "⚠️ 未找到期望的 macOS 发布包 (DMG 或 ZIP)，跳过更新 appcast.xml"
+    echo "⚠️ 未同时找到 arm64 与 x86_64 发布包，跳过更新 appcast.xml"
 fi
 
 echo "=========================================="
