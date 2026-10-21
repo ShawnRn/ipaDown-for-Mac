@@ -111,13 +111,21 @@ enum AuthService {
                     "why": "signIn"
                 ]
 
+                var headers: [String: String] = [:]
+                if !activeStoreFront.isEmpty {
+                    headers["X-Apple-Store-Front"] = "\(activeStoreFront)-19,32"
+                } else if let sysSF = CountryCodes.storeId(for: Locale.current.region?.identifier ?? "CN") {
+                    headers["X-Apple-Store-Front"] = "\(sysSF)-19,32"
+                }
+
                 logger.info("登录", "正在进行 Apple SAP 安全认证 [\(currentURL.host ?? "未知服务器")]...")
                 let (data, response, newCookies) = try await StoreClient.postPlist(
                     url: currentURL,
                     body: body,
+                    headers: headers,
                     cookies: currentCookies,
                     userAgentOverride: StoreClient.appleUserAgent,
-                    contentType: "application/x-www-form-urlencoded",
+                    contentType: "application/x-apple-plist",
                     signAction: true
                 )
                 mergeCookies(&currentCookies, with: newCookies)
@@ -141,8 +149,14 @@ enum AuthService {
                     continue
                 }
 
-                guard !data.isEmpty else {
-                    throw IPAError.authenticationFailed("Apple 登录响应为空 (HTTP \(response.statusCode))")
+                if response.statusCode == 204 || data.isEmpty {
+                    if requestNumber < 3 {
+                        logger.warning("登录", "Apple 返回空响应 (HTTP \(response.statusCode))，将在 1 秒后自动重试...")
+                        requestNumber += 1
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        continue
+                    }
+                    throw IPAError.authenticationFailed("Apple 登录响应为空 (HTTP \(response.statusCode))，请稍后重试")
                 }
 
                 let dict: [String: Any]
@@ -276,7 +290,7 @@ enum AuthService {
         var components = URLComponents()
         components.scheme = "https"
         components.host = "buy.itunes.apple.com"
-        components.path = "/WebObjects/MZFinance.woa/wa/authenticate"
+        components.path = "/WebObjects/MZFinance.woa/wa/authenticate/"
         components.queryItems = [URLQueryItem(name: "guid", value: guid)]
         return components.url!
     }
@@ -285,7 +299,7 @@ enum AuthService {
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return url
         }
-        if components.path.contains("/native/") && !components.path.hasSuffix("/") {
+        if !components.path.hasSuffix("/") {
             components.path += "/"
         }
         var queryItems = components.queryItems ?? []

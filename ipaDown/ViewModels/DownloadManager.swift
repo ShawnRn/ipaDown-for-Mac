@@ -160,6 +160,12 @@ class DownloadManager {
             logger.error("下载", "恢复任务失败: 找不到账号信息 (\(task.accountEmail))")
             return
         }
+
+        // 避免连续点击“继续”产生多个并发请求，并清除上次失败的展示状态。
+        downloadTasks[task.id]?.cancel()
+        task.error = nil
+        task.status = .waiting
+        task.speed = "等待恢复"
         
         let downloadTask = Task {
             await startDownload(task: task, account: finalAccount)
@@ -196,11 +202,7 @@ class DownloadManager {
                 
                 // 2. 获取下载信息
                 task.status = .fetchingInfo
-                let info = try await DownloadService.requestDownload(
-                    account: mutableAccount,
-                    appId: task.appId,
-                    versionId: task.versionId
-                )
+                let info = try await requestDownloadInfo(task: task, account: mutableAccount)
                 
                 task.downloadURL = info.downloadURL
                 task.sinfs = info.sinfs
@@ -320,6 +322,55 @@ class DownloadManager {
                 saveTasks()
                 return
             }
+        }
+    }
+
+    /// Apple 偶尔会先更新商店展示版本，随后才向私有下载接口开放对应 IPA。
+    /// 仅在用户请求“最新版”且接口返回空下载项时，尝试最近的历史版本；
+    /// 用户明确选择的历史版本绝不自动替换。
+    private func requestDownloadInfo(task: IPADownloadTask, account: Account) async throws -> DownloadInfo {
+        do {
+            return try await DownloadService.requestDownload(
+                account: account,
+                appId: task.appId,
+                versionId: task.versionId
+            )
+        } catch IPAError.downloadItemUnavailable where task.versionId.isEmpty {
+            logger.warning("下载", "商店最新版暂未返回 IPA，正在分析应用区域与历史版本: \(task.appName)")
+
+            // 1. 区域上架诊断：检查该应用是否在当前登录账号所在国家商店提供
+            if let accountCountry = CountryCodes.countryCode(for: account.storeFront) {
+                let isAvailableInAccountRegion = (try? await SearchService.lookup(appId: task.appId, countryCode: accountCountry)) != nil
+                if !isAvailableInAccountRegion {
+                    let regionName = CountryCodes.countryName(for: accountCountry)
+                    throw IPAError.downloadFailed("该应用未在当前账号所在地区（\(regionName)）上架，请切换到上架该应用的地区账号（如美区）后再下载")
+                }
+            }
+
+            // 2. 尝试获取最近可用的历史版本
+            let (versions, _) = try await VersionService.getVersionHistoryFromBilin(
+                appId: task.appId,
+                page: 1
+            )
+
+            for version in versions.prefix(10) {
+                do {
+                    let info = try await DownloadService.requestDownload(
+                        account: account,
+                        appId: task.appId,
+                        versionId: version.externalVersionId
+                    )
+                    task.versionId = version.externalVersionId
+                    task.displayVersion = version.displayVersion ?? version.externalVersionId
+                    logger.success("下载", "已回退到最近可下载版本 v\(task.displayVersion)")
+                    saveTasks()
+                    return info
+                } catch IPAError.downloadItemUnavailable {
+                    continue
+                }
+            }
+
+            throw IPAError.downloadFailed("商店最新版尚未开放下载，且未找到可用的历史版本")
         }
     }
     

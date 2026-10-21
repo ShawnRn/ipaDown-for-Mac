@@ -90,35 +90,40 @@ enum PurchaseService {
         let dict = try PlistHelper.deserialize(data)
         
         // 检查失败类型
-        if let failureType = dict["failureType"] as? String {
+        if let failureType = PlistHelper.stringValue(dict["failureType"]) {
             switch failureType {
             case "2059":
                 throw IPAError.purchaseFailed("暂时不可用 (temporarily unavailable)")
-            case "2034":
+            case "1008", "2034", "2042":
                 throw IPAError.tokenExpired
             case "5002", "2040":
                 // 已在资料库中，视为成功
                 logger.info("购买", "应用已在资料库中")
                 return
             default:
-                let msg = dict["customerMessage"] as? String ?? "购买失败: \(failureType)"
+                let msg = PlistHelper.responseMessage(in: dict) ?? "购买失败: \(failureType)"
                 throw IPAError.purchaseFailed(msg)
             }
         }
         
         // 检查购买成功
         if let docType = dict["jingleDocType"] as? String,
-           let status = dict["status"] as? Int {
+           let status = PlistHelper.intValue(dict["status"]) {
             if docType == "purchaseSuccess" && status == 0 {
                 return
             }
         }
         
         // 判断是否成功（ipatool.js 模式）
-        if let status = dict["status"] as? Int, status == 0 {
+        if let status = PlistHelper.intValue(dict["status"]), status == 0 {
             return
         }
-        
-        throw IPAError.purchaseFailed("未知购买响应")
+
+        if let message = PlistHelper.responseMessage(in: dict) {
+            throw IPAError.purchaseFailed(message)
+        }
+
+        let status = PlistHelper.stringValue(dict["status"])
+        throw IPAError.purchaseFailed(status.map { "Apple 返回未知购买响应（状态 \($0)）" } ?? "Apple 返回未知购买响应")
     }
 }

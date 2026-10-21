@@ -45,15 +45,15 @@ enum VersionService {
         logger.info("版本", "响应 keys: \(dict.keys.sorted().joined(separator: ", "))")
         
         // 检查失败
-        if let failureType = dict["failureType"] as? String {
-            logger.info("版本", "failureType: \(failureType), customerMessage: \(dict["customerMessage"] as? String ?? "无")")
-            if failureType == "2034" {
+        if let failureType = PlistHelper.stringValue(dict["failureType"]) {
+            logger.info("版本", "failureType: \(failureType), customerMessage: \(PlistHelper.responseMessage(in: dict) ?? "无")")
+            if ["1008", "2034", "2042", "5002"].contains(failureType) {
                 throw IPAError.tokenExpired
             }
-            if failureType == "1008" || failureType == "9610" {
+            if failureType == "9610" {
                 throw IPAError.licenseRequired
             }
-            let msg = dict["customerMessage"] as? String ?? "版本查询失败: \(failureType)"
+            let msg = PlistHelper.responseMessage(in: dict) ?? "版本查询失败: \(failureType)"
             throw IPAError.downloadFailed(msg)
         }
         

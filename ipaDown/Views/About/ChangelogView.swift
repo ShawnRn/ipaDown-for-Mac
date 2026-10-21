@@ -20,6 +20,15 @@ struct ChangelogView: View {
     
     let changelogs: [ChangelogItem] = [
         ChangelogItem(
+            version: "1.4.5",
+            date: "2026-10-21",
+            changes: [
+                "修复 Apple 认证接口未带尾随斜杠导致返回 HTTP 204 空响应的问题。",
+                "优化双重验证输入体验，消除系统光标泄漏问题，增加未收到推送时的验证码获取指引。",
+                "微调登录弹窗 Apple 标志的光学居中与质感呈现。"
+            ]
+        ),
+        ChangelogItem(
             version: "1.4.4",
             date: "2026-08-31",
             changes: [

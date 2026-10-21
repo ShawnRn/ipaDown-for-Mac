@@ -194,13 +194,15 @@ struct AccountView: View {
             HStack(alignment: .top, spacing: 20) {
                 // 左侧应用/Apple 图标
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 60, height: 60)
+                        .shadow(color: Color.accentColor.opacity(0.2), radius: 6, x: 0, y: 3)
 
                     Image(systemName: "applelogo")
                         .font(.system(size: 32))
                         .foregroundStyle(.white)
+                        .offset(y: -2.5) // 光学居中微调（补偿 SF Symbol 字形基线偏差）
                 }
 
                 VStack(alignment: .leading, spacing: 16) {
@@ -375,7 +377,7 @@ struct AccountView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("请输入发送到你设备上的 6 位验证码")
+                    Text("请输入发送到受信任设备上的 6 位验证码")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -386,6 +388,19 @@ struct AccountView: View {
             OTPInputView(code: $manager.twoFactorCode, onComplete: {
                 submitTwoFactor()
             })
+
+            // 获取验证码指引
+            VStack(spacing: 4) {
+                Text("若未收到推送，请在受信任设备上打开：")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                Text("「设置」>「Apple 账户」>「登录与安全性」>「获取验证码」")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+            }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 8)
 
             if let error = accountManager.errorMessage {
                 Text(error)
@@ -458,10 +473,10 @@ struct OTPInputView: View {
                 .textContentType(.oneTimeCode)
                 #endif
                 .focused($isFocused)
-                // 使其完全透明且尺寸极小，避免任何视觉布局干扰
-                .opacity(0.01)
+                // 使其完全透明并移出屏幕可视范围，防止系统光标泄漏在方格中央
+                .opacity(0.001)
                 .frame(width: 1, height: 1)
-                // 彻底不拦截系统触摸
+                .offset(x: -9999, y: -9999)
                 .allowsHitTesting(false)
                 .onChange(of: code) { _, newValue in
                     let filtered = String(newValue.filter { $0.isNumber }.prefix(6))

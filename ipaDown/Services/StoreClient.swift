@@ -122,10 +122,10 @@ enum StoreClient {
     private static func parseHTTPError(statusCode: Int, data: Data, url: URL) -> String {
         // 尝试从 plist 解析 Apple 官方错误消息
         if let dict = try? PlistHelper.deserialize(data) {
-            if let customerMessage = dict["customerMessage"] as? String, !customerMessage.isEmpty {
+            if let customerMessage = PlistHelper.responseMessage(in: dict), !customerMessage.isEmpty {
                 return "Apple 服务提示: \(customerMessage) (HTTP \(statusCode))"
             }
-            if let failureType = dict["failureType"] as? String, !failureType.isEmpty {
+            if let failureType = PlistHelper.stringValue(dict["failureType"]), !failureType.isEmpty {
                 return "Apple 拒绝请求 (错误码: \(failureType), HTTP \(statusCode))"
             }
         }

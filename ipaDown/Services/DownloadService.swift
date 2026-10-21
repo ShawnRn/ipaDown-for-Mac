@@ -32,20 +32,22 @@ enum DownloadService {
         
         logger.info("下载", "正在获取下载信息: App ID \(appId)")
         
-        let url = URL(string: "https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct")!
+        var urlComponents = URLComponents(string: "https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct")!
+        urlComponents.queryItems = [URLQueryItem(name: "guid", value: guid)]
+        guard let url = urlComponents.url else {
+            throw IPAError.downloadFailed("无效的 Apple 下载接口 URL")
+        }
         
         var body: [String: Any] = [
             "creditDisplay": "",
             "guid": guid,
-            "adamId": appId,
-            "salableAdamId": appId, // 同时包含两者以确保兼容性
+            "salableAdamId": appId,
+            "serialNumber": "0",
         ]
         
         // 指定版本
         if !versionId.isEmpty {
-            if let vid = Int64(versionId) {
-                body["externalVersionId"] = vid
-            }
+            body["externalVersionId"] = versionId
         }
         
         var headers = StoreClient.authHeaders(for: account)
@@ -62,12 +64,12 @@ enum DownloadService {
         let dict = try PlistHelper.deserialize(data)
         
         // 检查失败
-        if let failureType = dict["failureType"] as? String {
-            let customerMsg = dict["customerMessage"] as? String
+        if let failureType = PlistHelper.stringValue(dict["failureType"]) {
+            let customerMsg = PlistHelper.responseMessage(in: dict)
             switch failureType {
-            case "2034":
+            case "1008", "2034", "2042", "5002":
                 throw IPAError.tokenExpired
-            case "1008":
+            case "9610":
                 throw IPAError.licenseRequired
             default:
                 let msg = customerMsg ?? "下载请求失败: \(failureType)"
@@ -83,7 +85,22 @@ enum DownloadService {
         // 提取下载信息
         guard let items = dict["songList"] as? [[String: Any]],
               let item = items.first else {
-            throw IPAError.downloadFailed("未找到下载项")
+            // 某些 Apple 错误响应没有 failureType，但仍包含 status 或提示文本。
+            // 优先展示真实原因，避免把许可、地区或账号问题误报为“未找到下载项”。
+            if let message = PlistHelper.responseMessage(in: dict) {
+                if message.localizedCaseInsensitiveContains("license")
+                    || message.contains("许可") {
+                    throw IPAError.licenseRequired
+                }
+                throw IPAError.downloadFailed(message)
+            }
+
+            let keys = dict.keys.sorted().joined(separator: ", ")
+            logger.warning("下载", "下载响应缺少 songList；响应字段: \(keys)")
+            if let status = PlistHelper.stringValue(dict["status"]), status != "0" {
+                throw IPAError.downloadFailed("Apple 返回错误状态 \(status)")
+            }
+            throw IPAError.downloadItemUnavailable
         }
         
         guard let downloadURL = item["URL"] as? String else {
@@ -301,5 +318,3 @@ private actor AtomicCounter {
         return value
     }
 }
-
-

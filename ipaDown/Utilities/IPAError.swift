@@ -14,6 +14,7 @@ enum IPAError: LocalizedError {
     case networkError(String)
     case invalidResponse(String)
     case downloadFailed(String)
+    case downloadItemUnavailable
     case signatureFailed(String)
     case md5Mismatch(expected: String, actual: String)
     case licenseRequired
@@ -30,6 +31,7 @@ enum IPAError: LocalizedError {
         case .networkError(let msg): "网络错误: \(msg)"
         case .invalidResponse(let msg): "无效响应: \(msg)"
         case .downloadFailed(let msg): "下载失败: \(msg)"
+        case .downloadItemUnavailable: "Apple 暂未提供该版本的下载项"
         case .signatureFailed(let msg): "签名失败: \(msg)"
         case .md5Mismatch(let expected, let actual): "MD5 校验失败: 预期 \(expected), 实际 \(actual)"
         case .licenseRequired: "未找到许可，请先购买此应用"

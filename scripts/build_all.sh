@@ -228,7 +228,10 @@ elif [ -f "$ZIP_X86_64" ]; then
 fi
 
 if [ -n "$RELEASE_FILE_ARM64" ] && [ -n "$RELEASE_FILE_X86_64" ]; then
-    SIGN_TOOL=$(find ~/Library/Developer/Xcode/DerivedData -name "sign_update" -type f -perm +111 | head -n 1)
+    SIGN_TOOL=$(find ~/Library/Developer/Xcode -name "sign_update" -path "*/artifacts/sparkle/Sparkle/bin/sign_update" -type f -perm +111 2>/dev/null | head -n 1)
+    if [ -z "$SIGN_TOOL" ]; then
+        SIGN_TOOL=$(find ~/Library/Developer/Xcode -name "sign_update" -type f -perm +111 2>/dev/null | head -n 1)
+    fi
 
     SPARKLE_VERSION="$PROJECT_BUILD"
     echo "使用项目 Build 号 (sparkle:version): $SPARKLE_VERSION"
