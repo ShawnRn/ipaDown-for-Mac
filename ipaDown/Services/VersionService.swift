@@ -25,7 +25,7 @@ enum VersionService {
         let body: [String: Any] = [
             "creditDisplay": "",
             "guid": guid,
-            "adamId": appId,
+            "salableAdamId": appId,
         ]
         
         var headers = StoreClient.authHeaders(for: account)
@@ -47,13 +47,18 @@ enum VersionService {
         // 检查失败
         if let failureType = PlistHelper.stringValue(dict["failureType"]) {
             logger.info("版本", "failureType: \(failureType), customerMessage: \(PlistHelper.responseMessage(in: dict) ?? "无")")
-            if ["1008", "2034", "2042", "5002"].contains(failureType) {
+            if ["1008", "2002", "2034", "2042", "5002"].contains(failureType) {
                 throw IPAError.tokenExpired
             }
             if failureType == "9610" {
                 throw IPAError.licenseRequired
             }
             let msg = PlistHelper.responseMessage(in: dict) ?? "版本查询失败: \(failureType)"
+            if msg.localizedCaseInsensitiveContains("password has changed")
+                || msg.localizedCaseInsensitiveContains("sign in")
+                || msg.localizedCaseInsensitiveContains("session") {
+                throw IPAError.tokenExpired
+            }
             throw IPAError.downloadFailed(msg)
         }
         

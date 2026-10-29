@@ -67,12 +67,17 @@ enum DownloadService {
         if let failureType = PlistHelper.stringValue(dict["failureType"]) {
             let customerMsg = PlistHelper.responseMessage(in: dict)
             switch failureType {
-            case "1008", "2034", "2042", "5002":
+            case "1008", "2002", "2034", "2042", "5002":
                 throw IPAError.tokenExpired
             case "9610":
                 throw IPAError.licenseRequired
             default:
                 let msg = customerMsg ?? "下载请求失败: \(failureType)"
+                if msg.localizedCaseInsensitiveContains("password has changed")
+                    || msg.localizedCaseInsensitiveContains("sign in")
+                    || msg.localizedCaseInsensitiveContains("session") {
+                    throw IPAError.tokenExpired
+                }
                 // 如果 customerMessage 包含 license 相关关键词，统一视为许可缺失
                 if msg.localizedCaseInsensitiveContains("license")
                     || msg.contains("许可") {
@@ -88,6 +93,11 @@ enum DownloadService {
             // 某些 Apple 错误响应没有 failureType，但仍包含 status 或提示文本。
             // 优先展示真实原因，避免把许可、地区或账号问题误报为“未找到下载项”。
             if let message = PlistHelper.responseMessage(in: dict) {
+                if message.localizedCaseInsensitiveContains("password has changed")
+                    || message.localizedCaseInsensitiveContains("sign in")
+                    || message.localizedCaseInsensitiveContains("session") {
+                    throw IPAError.tokenExpired
+                }
                 if message.localizedCaseInsensitiveContains("license")
                     || message.contains("许可") {
                     throw IPAError.licenseRequired

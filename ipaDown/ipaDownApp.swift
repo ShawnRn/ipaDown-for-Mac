@@ -15,6 +15,9 @@ struct ipaDownApp: App {
     #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     #endif
+    #if os(macOS)
+    @State private var decryptionManager = DecryptionManager()
+    #endif
     @AppStorage("theme") private var theme = "auto"
     @State private var accountManager = AccountManager()
     @State private var searchManager = SearchManager()
@@ -32,6 +35,9 @@ struct ipaDownApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                #if os(macOS)
+                .environment(decryptionManager)
+                #endif
                 .environment(accountManager)
                 .environment(searchManager)
                 .environment(versionManager)

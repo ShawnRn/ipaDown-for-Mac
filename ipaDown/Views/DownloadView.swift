@@ -9,6 +9,10 @@ import SwiftUI
 
 struct DownloadView: View {
     @Environment(DownloadManager.self) private var downloadManager
+    #if os(macOS)
+    @Environment(DecryptionManager.self) private var decryptionManager
+    @State private var showDecryption = false
+    #endif
     @State private var selectedTask: IPADownloadTask?
     @State private var shareURL: IdentifiableURL?
     
@@ -35,8 +39,23 @@ struct DownloadView: View {
                                 },
                                 onShare: {
                                     handleShare(task)
+                                },
+                                onDecrypt: {
+                                    #if os(macOS)
+                                    selectForDecryption(task)
+                                    #endif
                                 }
                             )
+                            #if os(macOS)
+                            .contextMenu {
+                                if task.status == .completed {
+                                    Button("砸壳 IPA…", systemImage: "lock.open") {
+                                        selectForDecryption(task)
+                                    }
+                                    .disabled(decryptionManager.isRunning)
+                                }
+                            }
+                            #endif
                             #if os(iOS)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
@@ -63,9 +82,13 @@ struct DownloadView: View {
             }
             .navigationTitle("下载管理")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    HStack {
+                ToolbarItemGroup(placement: .primaryAction) {
                         #if os(macOS)
+                        Button {
+                            showDecryption = true
+                        } label: {
+                            Label(decryptionManager.isRunning ? "砸壳进行中…" : "IPA 砸壳", systemImage: "lock.open")
+                        }
                         Button {
                             downloadManager.showDownloadFolder()
                         } label: {
@@ -78,9 +101,11 @@ struct DownloadView: View {
                         } label: {
                             Label("清除已完成", systemImage: "trash")
                         }
-                    }
                 }
             }
+            #if os(macOS)
+            .sheet(isPresented: $showDecryption) { DecryptionView() }
+            #endif
             #if os(iOS)
             .sheet(item: $shareURL) { item in
                 ActivityView(activityItems: [item.url])
@@ -89,6 +114,14 @@ struct DownloadView: View {
         }
     }
     
+    #if os(macOS)
+    private func selectForDecryption(_ task: IPADownloadTask) {
+        let original = task.filePath ?? downloadManager.downloadDirectory.appendingPathComponent(task.fileName)
+        decryptionManager.selectInput(original)
+        showDecryption = true
+    }
+    #endif
+
     // 使得 URL 遵循 Identifiable 以便在 sheet 中使用
     struct IdentifiableURL: Identifiable {
         let id = UUID()
@@ -132,6 +165,7 @@ struct DownloadTaskRow: View {
     let onTogglePause: () -> Void
     let onRemove: () -> Void
     let onShare: () -> Void
+    let onDecrypt: () -> Void
     
     #if os(macOS)
     @State private var localShareURL: URL?
@@ -197,6 +231,8 @@ struct DownloadTaskRow: View {
                     Button(task.status.isActive ? "暂停" : "继续") { onTogglePause() }
                         .buttonStyle(.bordered)
                 } else {
+                    Button("砸壳", systemImage: "lock.open", action: onDecrypt)
+                    .buttonStyle(.bordered)
                     Image(systemName: "square.and.arrow.up")
                         .font(.body)
                         .padding(4)
@@ -261,6 +297,12 @@ struct DownloadTaskRow: View {
             .frame(maxHeight: .infinity, alignment: .center)
             #endif
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityActions {
+            if task.status != .completed {
+                Button(task.status.isActive ? "暂停下载" : "继续下载", action: onTogglePause)
+            }
+        }
         .padding(.vertical, 6)
         #if os(macOS)
         .padding(.horizontal, 16)
@@ -303,5 +345,3 @@ struct MacShareView: NSViewRepresentable {
     }
 }
 #endif
-
-

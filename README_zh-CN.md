@@ -39,11 +39,25 @@
 - **原生体验**：使用 SwiftUI 构建，拥有丝般顺滑的 macOS 原生界面与动画。
 - **账号管理**：支持多 Apple ID 管理，一键切换商店国家/地区（Storefront）。
 - **高级搜索**：支持 App 关键词搜索及历史版本 ID 获取。
-- **高速下载**：内置 `aria2` 后端，支持多线程并发下载与断点续传。
+- **高速下载**：基于 URLSession 的分块并发下载。
 - **自动保活**：全自动 Token 刷新机制，确保会话持久有效。
-- **跨平台支持**：支持导出专供 iOS/iPadOS 设备安装的 `.ipa` 格式，完美兼容 TrollStore、Sideloadly 等安装方式。
+- **跨平台支持**：支持 macOS 与 iOS/iPadOS 下载 IPA；安装与运行需满足解密、签名及设备兼容条件。
 - **自动打包**：集成双端自动打包脚本，一键生成 macOS `.dmg` 与 iOS `.ipa`。
 - **自动更新**：集成 Sparkle 框架（仅 Mac 端），时刻保持最新版本。
+
+## IPA 砸壳（macOS）
+
+在下载管理中直接砸壳已下载的 IPA，也可选择本地文件。首次使用向导从受支持的正式版 Apple 芯片 Mac 恢复私有 FairPlay 模型；需要登录 Mac App Store、安装并打开一款 iPhone/iPad 应用，以及与其授权状态匹配的 IPA。样本不要求版本号完全相同，最终须通过 UnfairPlay 完整验证。
+
+模型生成后可复用于相同授权状态下的其他 IPA，无需逐个在 Mac 安装目标应用。模型仅保存在本机，原 IPA 保留，结果另存；不包含重新签名，也不保证侧载后的运行兼容性。iOS 版不提供本机砸壳。仅用于合法获取的应用及本人控制的账号和设备。
+
+详见 [使用与构建说明](docs/IPA砸壳.md)。macOS 源码构建另需 Git、网络和 Go 1.26+；内置解密工具固定至经过此次集成验证的上游提交。
+
+## 致谢 / Credits
+
+- [DrWhax/UnfairPlay](https://github.com/DrWhax/unfairplay)：实际的 FairPlay 模型恢复与 IPA 解密引擎，是本功能的核心。尊重其 MIT、Apache-2.0 及相关组件许可，完整 LICENSE 与 NOTICE 随 macOS 安装包附带。
+- [missuo/unfairplay-bot](https://github.com/missuo/unfairplay-bot)：启发此次本机解密工作流的集成；ipaDown 没有包含其 Telegram 或服务器代码。
+- [majd/ipatool](https://github.com/majd/ipatool)：App Store 协议与错误码处理参考。
 
 ## 📦 安装指南
 
@@ -75,9 +89,9 @@
 
 ## 🛠 技术栈
 
-- **UI**: SwiftUI (macOS 13.0+)
-- **Core**: Swift 5.9+
-- **Network**: aria2c (embedded)
+- **UI**: SwiftUI (macOS 26.0+, iOS 26.0+)
+- **Core**: Swift / Swift Concurrency
+- **Network**: URLSession + ZIPFoundation
 - **Update**: Sparkle
 - **Design**: 遵循 Apple Human Interface Guidelines
 

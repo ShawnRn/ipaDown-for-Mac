@@ -12,6 +12,9 @@ struct SettingsView: View {
         Form {
             GeneralSettingsTab(isSectionOnly: true)
             DownloadsSettingsTab(isSectionOnly: true)
+            #if os(macOS)
+            DecryptionSettingsSection()
+            #endif
             NetworkSettingsTab(isSectionOnly: true)
         }
         #if os(macOS)

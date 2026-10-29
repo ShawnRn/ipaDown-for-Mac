@@ -28,23 +28,37 @@
 
 ## 📖 Introduction
 
-**ipaDown** is a cross-platform download tool designed to fetch `.ipa` files directly from the App Store and generate iOS packages compatible with TrollStore/Sideloading on macOS.
+**ipaDown** is a cross-platform download tool designed to fetch `.ipa` files directly from the App Store on macOS and iOS.
 
 > 💡 **Inspiration**
 > This project is inspired by the **ipaDown Windows version** released on the **52pojie forum**. Our mission is to migrate and enhance its core functionalities natively for the macOS ecosystem, providing a seamless experience for Apple users.
 
-Powered by standard system APIs and `aria2`, it offers a clean, native UI while ensuring high-performance downloads.
+Powered by native system APIs, it offers a clean, native UI while ensuring high-performance downloads.
 
 ## ✨ Features
 
 - **Native Experience**: Built with SwiftUI for a smooth, responsive macOS interface.
 - **Account Management**: Support for multiple Apple IDs and quick switching between Storefront regions.
 - **Advanced Search**: Search for apps and retrieve historical version IDs effortlessly.
-- **High-Speed Download**: Integrated `aria2` backend for multi-threaded, resume-supported downloads.
+- **High-Speed Download**: Native URLSession chunked downloads with concurrent transfers.
 - **Auto-Refresh**: Automatic token refreshing to keep your sessions active.
-- **Cross-Platform Support**: Export `.ipa` files specifically for iOS/iPadOS, fully compatible with TrollStore, Sideloadly, and other sideloading methods.
+- **Cross-Platform Support**: Download App Store IPA files on macOS and iOS/iPadOS; installation depends on decryption, signing and device compatibility.
 - **Automated Build**: Integrated cross-platform build script to generate both macOS `.dmg` and iOS `.ipa` in one click.
 - **Automatic Updates**: Integrated Sparkle framework (macOS only) to keep you on the latest version.
+
+## Local IPA decryption (macOS)
+
+Decrypt a completed download or select a local IPA. The first-run wizard recovers a private FairPlay model on a supported stable Apple silicon Mac. It requires signing in to the Mac App Store, installing and opening an iPhone/iPad app, and an IPA with matching enrollment state. Identical app version numbers are not required; UnfairPlay must validate the recovered model against the IPA.
+
+Reuse the model for other IPAs personalized for the same enrollment, without installing each target app on the Mac. Models stay local, originals are preserved, and results are saved separately. Decryption does not re-sign an app or guarantee sideloading compatibility. Local decryption is not available on iOS. Use only with lawfully acquired apps and accounts/devices you control.
+
+See the [usage and build notes](docs/IPA砸壳.md). macOS source builds additionally require Git, network access and Go 1.26+. The embedded engine is pinned to the upstream revision used for this integration.
+
+## Credits
+
+- [DrWhax/UnfairPlay](https://github.com/DrWhax/unfairplay): the core FairPlay model recovery and IPA decryption engine. Its MIT, Apache-2.0 and component license notices are retained; complete licenses and NOTICE are bundled with the macOS app.
+- [missuo/unfairplay-bot](https://github.com/missuo/unfairplay-bot): inspiration for integrating this decryption workflow. ipaDown does not include its Telegram bot or server code.
+- [majd/ipatool](https://github.com/majd/ipatool): reference for App Store protocols and response handling.
 
 ## 📦 Installation
 
@@ -76,9 +90,9 @@ Download the latest `.dmg` installer from the [Releases](https://github.com/Shaw
 
 ## 🛠 Tech Stack
 
-- **UI**: SwiftUI (macOS 13.0+)
-- **Core**: Swift 5.9+
-- **Network**: aria2c (embedded)
+- **UI**: SwiftUI (macOS 26.0+, iOS 26.0+)
+- **Core**: Swift / Swift Concurrency
+- **Network**: URLSession + ZIPFoundation
 - **Update**: Sparkle
 - **Reference**: Uses strictly typed, safe Swift concurrency models.
 

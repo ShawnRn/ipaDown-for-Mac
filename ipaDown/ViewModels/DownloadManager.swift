@@ -259,7 +259,7 @@ class DownloadManager {
                             continue
                         }
                         task.status = .failed
-                        task.error = "密码 Token 已过期，自动刷新失败，请在账号管理页重新登录。"
+                        task.error = "密码 Token 已过期或需双重验证，请前往「账号管理」点击【刷新 Token】完成验证。"
                         logger.error("下载", "购买时 Token 过期且刷新失败")
                         saveTasks()
                         return
@@ -291,7 +291,7 @@ class DownloadManager {
                 }
                 // 刷新失败或超过重试次数
                 task.status = .failed
-                task.error = "密码 Token 已过期，自动刷新失败，请在账号管理页重新登录。"
+                task.error = "密码 Token 已过期或需双重验证，请前往「账号管理」点击【刷新 Token】完成验证。"
                 logger.error("下载", "自动刷新 Token 失败")
                 saveTasks()
                 return
@@ -348,10 +348,10 @@ class DownloadManager {
             }
 
             // 2. 尝试获取最近可用的历史版本
-            let (versions, _) = try await VersionService.getVersionHistoryFromBilin(
+            let (versions, _) = (try? await VersionService.getVersionHistoryFromBilin(
                 appId: task.appId,
                 page: 1
-            )
+            )) ?? ([], false)
 
             for version in versions.prefix(10) {
                 do {
@@ -370,7 +370,18 @@ class DownloadManager {
                 }
             }
 
-            throw IPAError.downloadFailed("商店最新版尚未开放下载，且未找到可用的历史版本")
+            let regionDesc: String
+            if let accountCountry = CountryCodes.countryCode(for: account.storeFront) {
+                regionDesc = CountryCodes.countryName(for: accountCountry)
+            } else {
+                regionDesc = "当前地区"
+            }
+
+            if versions.isEmpty {
+                throw IPAError.downloadFailed("未获取到下载数据。请确认当前账号（\(regionDesc)）已在 App Store“获取”过该应用，或在账号管理页点击【刷新 Token】后重试")
+            } else {
+                throw IPAError.downloadFailed("商店最新版及最近历史版本暂无可用下载项，请稍后重试")
+            }
         }
     }
     

@@ -90,18 +90,25 @@ enum PurchaseService {
         let dict = try PlistHelper.deserialize(data)
         
         // 检查失败类型
+        let customerMsg = PlistHelper.responseMessage(in: dict)
         if let failureType = PlistHelper.stringValue(dict["failureType"]) {
             switch failureType {
             case "2059":
                 throw IPAError.purchaseFailed("暂时不可用 (temporarily unavailable)")
-            case "1008", "2034", "2042":
+            case "1008", "2002", "2034", "2042":
                 throw IPAError.tokenExpired
             case "5002", "2040":
-                // 已在资料库中，视为成功
+                // buyProduct 的 5002 表示许可已存在，不是 Token 过期。
+                // 下载接口中的同码含义不同，不能共用错误码分类。
                 logger.info("购买", "应用已在资料库中")
                 return
             default:
-                let msg = PlistHelper.responseMessage(in: dict) ?? "购买失败: \(failureType)"
+                let msg = customerMsg ?? "购买失败: \(failureType)"
+                if msg.localizedCaseInsensitiveContains("password has changed")
+                    || msg.localizedCaseInsensitiveContains("sign in")
+                    || msg.localizedCaseInsensitiveContains("session") {
+                    throw IPAError.tokenExpired
+                }
                 throw IPAError.purchaseFailed(msg)
             }
         }

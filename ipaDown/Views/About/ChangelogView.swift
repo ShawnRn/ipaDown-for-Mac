@@ -19,6 +19,12 @@ struct ChangelogView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     let changelogs: [ChangelogItem] = [
+        ChangelogItem(version: "1.5.0", date: "2026-10-29", changes: [
+            "macOS 新增基于 UnfairPlay 的本机 IPA 砸壳，支持首次模型配置向导和已有模型导入。",
+            "模型按真实授权状态匹配，可复用于其他 IPA；原文件保留，结果另存。",
+            "简化砸壳界面，将模型管理移至配置入口，突出文件选择与完成结果。",
+            "修复已有应用许可被误报为 Token 过期、初始化子进程文件访问及重复砸壳报告重名问题。"
+        ]),
         ChangelogItem(
             version: "1.4.5",
             date: "2026-10-21",

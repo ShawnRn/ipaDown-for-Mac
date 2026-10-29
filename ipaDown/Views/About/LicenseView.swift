@@ -21,6 +21,12 @@ struct LicenseView: View {
 
     let licenses: [LicenseItem] = [
         LicenseItem(
+            name: "UnfairPlay",
+            license: "MIT / Apache-2.0",
+            description: "本机 FairPlay 模型恢复与 IPA 解密。内含 DarkPhoenix 和 macOSFairFree 的相关实现；完整许可与 NOTICE 随 macOS 应用附带。\nhttps://github.com/DrWhax/unfairplay",
+            type: "IPA 解密"
+        ),
+        LicenseItem(
             name: "Asspp",
             license: "MIT",
             description: "Seamless multi-account App Store management.\nhttps://github.com/Lakr233/Asspp",
