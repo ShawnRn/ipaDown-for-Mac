@@ -86,10 +86,6 @@ final class FairPlaySetupManager {
             }
             message = "正在查找 Mac 应用 \(app.version)（构建 \(app.build)）的真实下载版本…"
             let software = try await SearchService.lookupByBundleId(app.bundleID, countryCode: account.countryCode ?? "CN")
-            try await authenticated(account: &account, accounts: accounts) { current in
-                var updated = current
-                try await PurchaseService.purchase(account: &updated, appId: software.trackId)
-            }
             var candidates = [String]()
             var seen = Set<String>()
             func append(_ id: String) { if seen.insert(id).inserted { candidates.append(id) } }
@@ -139,7 +135,13 @@ final class FairPlaySetupManager {
                 let file = directory.appendingPathComponent(UUID().uuidString + ".ipa")
                 do {
                     let info = try await authenticated(account: &account, accounts: accounts) { current in
-                        try await DownloadService.requestDownload(account: current, appId: software.trackId, versionId: id)
+                        do {
+                            return try await DownloadService.requestDownload(account: current, appId: software.trackId, versionId: id)
+                        } catch IPAError.licenseRequired {
+                            var updated = current
+                            try await PurchaseService.purchase(account: &updated, appId: software.trackId)
+                            return try await DownloadService.requestDownload(account: updated, appId: software.trackId, versionId: id)
+                        }
                     }
                     try await DownloadService.downloadFile(from: info.downloadURL, to: file) { _, _, _, _, _ in }
                     try await SignatureService.signIPA(at: file, sinfs: info.sinfs, metadata: info.metadata)

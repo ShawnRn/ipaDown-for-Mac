@@ -4,12 +4,12 @@
     <title>ipaDown-for-Mac Updates</title>
     <item>
       <title>v1.5.0</title>
-      <pubDate>Thu, 29 Oct 2026 23:20:20 +0800</pubDate>
-      <sparkle:version>2026102901</sparkle:version>
+      <pubDate>Sat, 31 Oct 2026 09:49:17 +0800</pubDate>
+      <sparkle:version>2026103103</sparkle:version>
       <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.0/ipaDown_1.5.0_arm64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="CxwMJIyjBcrPXsNbf5Xuyqu2otIw+g7sqKdpK+/WXSLMEFcZgaDyQxPkP5ywk+LXpUaI0Wddo5+cvFry1xl3DA==" length="32525914" />
-      <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.0/ipaDown_1.5.0_x86_64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" sparkle:edSignature="L543DzW8SnWrRhJTeq0xhXJZ6TQ2ww2lLjq93BbgHdn3GnFlneWnMpNlSwK4UHViHO4FWntEchDqVFnuZ773CQ==" length="32595857" />
+      <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.0/ipaDown_1.5.0_arm64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="rXe41aUy+SysBKNIBHB/vb7eJfEHlLQG3AhhmCWAyKODqlihw/hRYTe4N1disfPVX7TlIodhLCemonOhscYvDQ==" length="32524154" />
+      <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.0/ipaDown_1.5.0_x86_64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" sparkle:edSignature="FFCssBC/bkPj/6PF1FPBfDnS/2KhnjfFQCL7Mk4fE2tMxLCuEqaVzglaIKBCpTTI9O4HwNNc6MEJw1g0iuwIAg==" length="32605233" />
     </item>
   </channel>
 </rss>

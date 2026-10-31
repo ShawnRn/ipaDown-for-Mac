@@ -19,7 +19,9 @@ struct ChangelogView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     let changelogs: [ChangelogItem] = [
-        ChangelogItem(version: "1.5.0", date: "2026-10-29", changes: [
+        ChangelogItem(version: "1.5.0", date: "2026-10-31", changes: [
+            "修复 SAP 签名失败时错误对象提前释放导致的崩溃。",
+            "已有应用直接请求下载，仅在服务端明确缺少许可时获取许可，避免前置请求超时阻塞。",
             "macOS 新增基于 UnfairPlay 的本机 IPA 砸壳，支持首次模型配置向导和已有模型导入。",
             "模型按真实授权状态匹配，可复用于其他 IPA；原文件保留，结果另存。",
             "简化砸壳界面，将模型管理移至配置入口，突出文件选择与完成结果。",
