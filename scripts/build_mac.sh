@@ -62,7 +62,14 @@ for TARGET_ARCH in "arm64"; do
         
         # 4. 对 macOS 应用进行 Ad-hoc 重新签名，启用 Hardened Runtime 并注入 entitlements
         echo ">>> 对 macOS 应用进行 Ad-hoc 重新签名 (${TARGET_ARCH})..."
+        xattr -cr "$TEMP_APP_DIR/ipaDown.app"
         codesign --force --deep --sign - --options runtime --entitlements "$PROJECT_DIR/ipaDown/ipaDown.entitlements" "$TEMP_APP_DIR/ipaDown.app"
+
+        # 深度签名后恢复 Store 引擎专属的 JIT 权限，再重新封装外层签名。
+        if [[ -x "$TEMP_APP_DIR/ipaDown.app/Contents/Helpers/storebridge" ]]; then
+            codesign --force --sign - --options runtime --entitlements "$PROJECT_DIR/scripts/storebridge/StoreBridge.entitlements" "$TEMP_APP_DIR/ipaDown.app/Contents/Helpers/storebridge" || exit 1
+            codesign --force --sign - --options runtime --entitlements "$PROJECT_DIR/ipaDown/ipaDown.entitlements" "$TEMP_APP_DIR/ipaDown.app" || exit 1
+        fi
         
         APP_VERSION=$(defaults read "$(pwd)/$TEMP_APP_DIR/ipaDown.app/Contents/Info.plist" CFBundleShortVersionString)
         

@@ -13,6 +13,15 @@ enum PurchaseService {
     
     /// 购买（获取许可）免费应用
     static func purchase(account: inout Account, appId: Int64, versionId: String = "0") async throws {
+        #if os(macOS)
+        try await StoreBridge.purchase(account: account, appId: appId)
+        #else
+        try await purchaseLegacy(account: &account, appId: appId, versionId: versionId)
+        #endif
+    }
+
+    /// 旧版 iOS 商店流程，同时保留已有错误码回归检查。
+    static func purchaseLegacy(account: inout Account, appId: Int64, versionId: String = "0") async throws {
         let guid = DeviceIdentifier.getOrCreate()
         
         logger.info("购买", "正在获取许可: App ID \(appId)")
@@ -45,7 +54,7 @@ enum PurchaseService {
         
         logger.success("购买", "获取许可成功")
     }
-    
+
     private static func purchaseWithParams(
         account: inout Account,
         appId: Int64,

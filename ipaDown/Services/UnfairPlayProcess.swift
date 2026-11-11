@@ -10,12 +10,13 @@ nonisolated final class UnfairPlayProcess: @unchecked Sendable {
     private var started = false
     private var cancelled = false
 
-    init(executable: URL, arguments: [String], log: FileHandle) {
+    init(executable: URL, arguments: [String], log: FileHandle, input: FileHandle = .nullDevice, environment: [String: String]? = nil) {
         process.executableURL = executable
         process.arguments = arguments
         process.standardOutput = log
         process.standardError = log
-        process.standardInput = FileHandle.nullDevice
+        process.standardInput = input
+        process.environment = environment
     }
 
     private func launch(_ continuation: CheckedContinuation<Int32, any Error>) {

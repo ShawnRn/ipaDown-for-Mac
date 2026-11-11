@@ -28,6 +28,9 @@ enum DownloadService {
         appId: Int64,
         versionId: String = ""
     ) async throws -> DownloadInfo {
+        #if os(macOS)
+        let data = try await StoreBridge.downloadData(account: account, appId: appId, versionId: versionId)
+        #else
         let guid = DeviceIdentifier.getOrCreate()
         
         logger.info("下载", "正在获取下载信息: App ID \(appId)")
@@ -53,7 +56,7 @@ enum DownloadService {
         var headers = StoreClient.authHeaders(for: account)
         headers["X-Token"] = account.passwordToken
         
-        let (data, _, _) = try await StoreClient.postPlist(
+        let (data, response, _) = try await StoreClient.postPlist(
             url: url,
             body: body,
             headers: headers,
@@ -61,6 +64,10 @@ enum DownloadService {
             userAgentOverride: StoreClient.appleUserAgent
         )
         
+        guard response.statusCode == 200, !data.isEmpty else {
+            throw IPAError.invalidResponse("Apple 下载接口未返回下载数据 (HTTP \(response.statusCode))")
+        }
+        #endif
         let dict = try PlistHelper.deserialize(data)
         
         // 检查失败
@@ -110,6 +117,9 @@ enum DownloadService {
             if let status = PlistHelper.stringValue(dict["status"]), status != "0" {
                 throw IPAError.downloadFailed("Apple 返回错误状态 \(status)")
             }
+            if let authorized = dict["authorized"] as? Bool, !authorized {
+                throw IPAError.downloadFailed("Apple 未授权本次下载，请刷新当前账号的 Token 后重试")
+            }
             throw IPAError.downloadItemUnavailable
         }
         
@@ -124,8 +134,9 @@ enum DownloadService {
         var sinfs: [SinfData] = []
         if let sinfDicts = item["sinfs"] as? [[String: Any]] {
             for sinfDict in sinfDicts {
-                if let id = sinfDict["id"] as? Int64,
-                   let sinfData = sinfDict["sinf"] as? Data {
+                if let sinfData = sinfDict["sinf"] as? Data {
+                    // 新版 Store 响应可省略值为 0 的编号，签名数据本身仍然有效。
+                    let id = (sinfDict["id"] as? NSNumber)?.int64Value ?? 0
                     sinfs.append(SinfData(id: id, data: sinfData))
                 }
             }

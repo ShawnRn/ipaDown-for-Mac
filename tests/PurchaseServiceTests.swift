@@ -18,6 +18,9 @@ import Foundation
         return (try PlistHelper.serialize(responses.removeFirst()), HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, [])
     }
 }
+@MainActor enum StoreBridge {
+    static func purchase(account: Account, appId: Int64) async throws { fatalError("旧版流程测试不应调用新版引擎") }
+}
 @main struct PurchaseServiceTests {
     @MainActor static func main() async throws {
         var account = Account(email: "test@example.invalid", password: "synthetic", appleId: "synthetic", storeFront: "143441", firstName: "", lastName: "", passwordToken: "synthetic", directoryServicesId: "1", cookies: [])
@@ -25,21 +28,21 @@ import Foundation
         for code: Any in ["5002", 5002, "2040"] {
             StoreClient.responses = [["failureType": code, "customerMessage": "An unknown error has occurred"]]
             StoreClient.calls = 0
-            try await PurchaseService.purchase(account: &account, appId: 123)
+            try await PurchaseService.purchaseLegacy(account: &account, appId: 123)
             precondition(StoreClient.calls == 1)
         }
         StoreClient.responses = [["failureType": "2034"]]
         do {
-            try await PurchaseService.purchase(account: &account, appId: 123)
+            try await PurchaseService.purchaseLegacy(account: &account, appId: 123)
             fatalError("真正失效的 Token 不可当作成功")
         } catch IPAError.tokenExpired { }
         StoreClient.responses = [["failureType": "2059"], ["jingleDocType": "purchaseSuccess", "status": 0]]
         StoreClient.calls = 0
-        try await PurchaseService.purchase(account: &account, appId: 123)
+        try await PurchaseService.purchaseLegacy(account: &account, appId: 123)
         precondition(StoreClient.calls == 2)
         StoreClient.responses = [["failureType": "9999", "customerMessage": "Store unavailable"]]
         do {
-            try await PurchaseService.purchase(account: &account, appId: 123)
+            try await PurchaseService.purchaseLegacy(account: &account, appId: 123)
             fatalError("其他商店错误不可当作成功")
         } catch IPAError.purchaseFailed(let message) { precondition(message == "Store unavailable") }
         print("PASS: owned license 5002/2040, numeric plist code, real token expiry, pricing fallback, other errors")

@@ -19,6 +19,9 @@ enum AuthService {
         existingCookies: [HTTPCookieData] = [],
         existingStoreFront: String = ""
     ) async throws -> Account {
+        #if os(macOS)
+        return try await StoreBridge.authenticate(email: email, password: password, code: code)
+        #else
         let guid = DeviceIdentifier.getOrCreate()
 
         // 1. 尝试使用现有 Cookie 与配置进行认证
@@ -65,6 +68,7 @@ enum AuthService {
             }
             throw error
         }
+        #endif
     }
 
     /// 刷新账号 Token（支持静默刷新或携带 2FA 验证码刷新）
@@ -93,6 +97,7 @@ enum AuthService {
         var activeStoreFront = storeFront
         let initialURL = await resolveAuthenticationURL(guid: guid)
         var currentURL = initialURL
+        var visitedURLs: Set<URL> = [initialURL]
         var redirectCount = 0
         let maxRedirects = 3
         var requestNumber = 1
@@ -142,8 +147,12 @@ enum AuthService {
                           isAllowedAuthenticationURL(redirectURL) else {
                         throw IPAError.authenticationFailed("Apple 返回了不安全或无效的认证重定向地址")
                     }
+                    let nextURL = normalizedAuthenticationURL(redirectURL, guid: guid)
+                    guard visitedURLs.insert(nextURL).inserted else {
+                        throw IPAError.authenticationFailed("Apple 认证地址重复重定向，请稍后重试")
+                    }
                     redirectCount += 1
-                    currentURL = normalizedAuthenticationURL(redirectURL, guid: guid)
+                    currentURL = nextURL
                     logger.info("登录", "认证请求已分配至 Apple Store Pod: \(currentURL.host ?? "")")
                     requestNumber += 1
                     continue
@@ -290,7 +299,7 @@ enum AuthService {
         var components = URLComponents()
         components.scheme = "https"
         components.host = "buy.itunes.apple.com"
-        components.path = "/WebObjects/MZFinance.woa/wa/authenticate/"
+        components.path = "/WebObjects/MZFinance.woa/wa/authenticate"
         components.queryItems = [URLQueryItem(name: "guid", value: guid)]
         return components.url!
     }
@@ -299,9 +308,7 @@ enum AuthService {
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return url
         }
-        if !components.path.hasSuffix("/") {
-            components.path += "/"
-        }
+        // 保留 Apple 给出的路径，避免把去掉尾斜杠的重定向改回原地址。
         var queryItems = components.queryItems ?? []
         queryItems.removeAll { $0.name == "guid" }
         queryItems.append(URLQueryItem(name: "guid", value: guid))

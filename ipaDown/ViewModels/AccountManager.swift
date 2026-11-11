@@ -148,6 +148,11 @@ class AccountManager {
 
     /// 删除账号
     func deleteAccount(_ account: Account) {
+        #if os(macOS)
+        if let directory = try? StoreBridge.sessionDirectory(email: account.email) {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        #endif
         accounts.removeAll { $0.id == account.id }
         if activeAccount?.id == account.id {
             activeAccount = accounts.first

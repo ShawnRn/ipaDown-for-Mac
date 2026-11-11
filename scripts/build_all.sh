@@ -6,7 +6,7 @@
 # 1. 配置路径
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-BUILD_DIR="$PROJECT_DIR/build_output"
+BUILD_DIR="${IPADOWN_BUILD_DIR:-$PROJECT_DIR/build_output}"
 MAC_ARCHIVE="$BUILD_DIR/Mac.xcarchive"
 IOS_ARCHIVE="$BUILD_DIR/iOS.xcarchive"
 WORKSPACE="$PROJECT_DIR/ipaDown-for-Apple.xcodeproj/project.xcworkspace"
@@ -96,7 +96,14 @@ for TARGET_ARCH in "arm64" "x86_64"; do
         
         # 4. 对 macOS 应用进行 Ad-hoc 重新签名，启用 Hardened Runtime 并注入 entitlements
         echo ">>> 对 macOS 应用进行 Ad-hoc 重新签名 (${TARGET_ARCH})..."
+        xattr -cr "$TEMP_APP_DIR/ipaDown.app"
         codesign --force --deep --sign - --options runtime --entitlements "$PROJECT_DIR/ipaDown/ipaDown.entitlements" "$TEMP_APP_DIR/ipaDown.app"
+
+        # 深度签名后恢复 Store 引擎专属的 JIT 权限，再重新封装外层签名。
+        if [[ -x "$TEMP_APP_DIR/ipaDown.app/Contents/Helpers/storebridge" ]]; then
+            codesign --force --sign - --options runtime --entitlements "$PROJECT_DIR/scripts/storebridge/StoreBridge.entitlements" "$TEMP_APP_DIR/ipaDown.app/Contents/Helpers/storebridge" || exit 1
+            codesign --force --sign - --options runtime --entitlements "$PROJECT_DIR/ipaDown/ipaDown.entitlements" "$TEMP_APP_DIR/ipaDown.app" || exit 1
+        fi
         
         APP_VERSION=$(defaults read "$(pwd)/$TEMP_APP_DIR/ipaDown.app/Contents/Info.plist" CFBundleShortVersionString)
         
@@ -261,7 +268,7 @@ if [ -n "$RELEASE_FILE_ARM64" ] && [ -n "$RELEASE_FILE_X86_64" ]; then
             <pubDate>$PUB_DATE</pubDate>
             <sparkle:version>$SPARKLE_VERSION</sparkle:version>
             <sparkle:shortVersionString>$APP_VERSION</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <enclosure url="$URL_ARM64" type="$TYPE_ARM64" sparkle:os="macos" sparkle:nativeArchitecture="arm64" $SIG_ARM64/>
             <enclosure url="$URL_X86_64" type="$TYPE_X86_64" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" $SIG_X86_64/>
         </item>

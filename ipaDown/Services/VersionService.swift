@@ -18,6 +18,9 @@ enum VersionService {
     ) async throws -> [String] {
         logger.info("版本", "正在查询历史版本: App ID \(appId)")
         
+        #if os(macOS)
+        let data = try await StoreBridge.downloadData(account: account, appId: appId, versionId: "")
+        #else
         let guid = DeviceIdentifier.getOrCreate()
         
         let url = URL(string: "https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct")!
@@ -39,6 +42,7 @@ enum VersionService {
             userAgentOverride: StoreClient.appleUserAgent
         )
         
+        #endif
         let dict = try PlistHelper.deserialize(data)
         
         // 调试日志
@@ -101,6 +105,9 @@ enum VersionService {
         appId: Int64,
         versionId: String
     ) async throws -> VersionInfo {
+        #if os(macOS)
+        let data = try await StoreBridge.downloadData(account: account, appId: appId, versionId: versionId)
+        #else
         let guid = DeviceIdentifier.getOrCreate()
         
         let url = URL(string: "https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct")!
@@ -128,6 +135,7 @@ enum VersionService {
             userAgentOverride: StoreClient.appleUserAgent
         )
         
+        #endif
         let dict = try PlistHelper.deserialize(data)
         
         // 提取版本元数据

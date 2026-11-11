@@ -54,9 +54,11 @@ struct ipaDownApp: App {
                 }
                 #endif
                 .task {
-                    // 启动时关联管理器并刷新 Token
+                    // 新版 Mac 会话按需刷新，避免每次打开都重新提交全部账号密码。
                     downloadManager.accountManager = accountManager
+                    #if !os(macOS)
                     await accountManager.refreshAllTokens()
+                    #endif
                 }
         }
         #if os(macOS)
