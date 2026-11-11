@@ -1,15 +1,15 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-  <channel>
-    <title>ipaDown-for-Mac Updates</title>
-    <item>
-      <title>v1.5.0</title>
-      <pubDate>Sat, 31 Oct 2026 09:49:17 +0800</pubDate>
-      <sparkle:version>2026103103</sparkle:version>
-      <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.0/ipaDown_1.5.0_arm64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="rXe41aUy+SysBKNIBHB/vb7eJfEHlLQG3AhhmCWAyKODqlihw/hRYTe4N1disfPVX7TlIodhLCemonOhscYvDQ==" length="32524154" />
-      <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.0/ipaDown_1.5.0_x86_64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" sparkle:edSignature="FFCssBC/bkPj/6PF1FPBfDnS/2KhnjfFQCL7Mk4fE2tMxLCuEqaVzglaIKBCpTTI9O4HwNNc6MEJw1g0iuwIAg==" length="32605233" />
-    </item>
-  </channel>
+    <channel>
+        <title>ipaDown-for-Mac Updates</title>
+        <item>
+            <title>v1.5.1</title>
+            <pubDate>Wed, 11 Nov 2026 09:19:57 +0800</pubDate>
+            <sparkle:version>2026111101</sparkle:version>
+            <sparkle:shortVersionString>1.5.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.1/ipaDown_1.5.1_arm64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="arm64" sparkle:edSignature="yRACbpmSFCpew1sJq8gY86WLFw6Y8KZ6nPuoR+bOULb6new4/7EnvKfSGLxlxwZ6bimHdb+N+H278wmDK4cDBQ==" length="54919306"/>
+            <enclosure url="https://github.com/ShawnRn/ipaDown-for-Mac/releases/download/v1.5.1/ipaDown_1.5.1_x86_64.dmg" type="application/octet-stream" sparkle:os="macos" sparkle:nativeArchitecture="x86_64" sparkle:edSignature="BGq6BZcDKnbujQDeylJE1JTMKSZqRK3eaNZ1GhcqKKm+I/q6nKjDU/KXhIrnYd9fvKcxt39lxpgrQ/HvkHXiDQ==" length="56923787"/>
+        </item>
+    </channel>
 </rss>
